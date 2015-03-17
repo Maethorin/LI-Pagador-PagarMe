@@ -18,12 +18,16 @@ deploy:
     tags: true
     repo: lojaintegrada/LI-Pagador-PagarMe
     all_branches: true
+  password:
+    secure: eW8bwqbbYy44MwXghh7pyWoGiBH1TAmLdfJyvc6v8mwv4os4Ym3261rPg8b7j+FAUo3T/oI79IK2YwwIPHmA9Ck/a8SzXPHLfrilft/XxP8q1qCXDRxX9trUNWKEmBHEMLj/FC+C8eW6RZyE/CTJvjkVUJde4hLxUOg+Fr58qEI=
 notifications:
   email:
     recipients:
     - contato@awsli.com.br
     - marcio.duarte@lojaintegrada.com.br
   hipchat:
+    rooms:
+      secure: LTVY7SZ/u4IMDlDPjk9sz1OZGzjPEvDWL1NuLWkjW7eFvZUscs5tBBSocKdmFHyal5yOvKPP8iiXrPxb7P8CSNr1/p3qxbx6HzQs6FU9/g/d607Okuh0uYVb+rvCP/auB/sQvv0917ram6eXNqToBl6ymtLymoqQeM5foXxoO3U=
     template:
-      - '%{result} - %{repository_name}#%{build_number} (%{branch} - %{commit} : %{author}) (<a href="%{build_url}">Details</a>/<a href="%{compare_url}">Change view</a>)'
+      - '%{result} - %{repository_name}#%{build_number} (%{branch} - %{commit} : %{author}) (<a href="%{build_url}">Detalhes</a>/<a href="%{compare_url}">Alterações</a>)'
     format: html
