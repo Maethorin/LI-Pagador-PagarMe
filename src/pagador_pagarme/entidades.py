@@ -7,22 +7,10 @@ CODIGO_GATEWAY = 12
 
 class PassosDeEnvio(object):
     pre = 'pre'
-    fulfill = 'fulfill'
-
-
-class TipoDeCartao(object):
-    credito = 'credit'
-    debito = 'debit'
-
-
-class TipoEndereco(object):
-    cliente = 1
-    entrega = 2
-    pagamento = 3
+    captura = 'captura'
 
 
 class Malote(entidades.Malote):
-
     def __init__(self, configuracao):
         super(Malote, self).__init__(configuracao)
         self._passo_atual = PassosDeEnvio.pre
@@ -37,7 +25,7 @@ class Malote(entidades.Malote):
         pedido_pagamento.preencher_do_banco()
         if self._passo_atual == PassosDeEnvio.pre:
             pass
-        if self._passo_atual == PassosDeEnvio.fulfill:
+        if self._passo_atual == PassosDeEnvio.captura:
             pass
 
     @property
@@ -61,4 +49,4 @@ class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
         super(ConfiguracaoMeioPagamento, self).__init__(loja_id, codigo_pagamento)
         self.preencher_gateway(self._codigo_gateway, self._campos)
         self.formulario = cadastro.FormularioPagarMe()
-        self.url_card_hash = ''
+        self.url_card_hash = 'https://pagar.me/assets/pagarme-v2.min.js'
