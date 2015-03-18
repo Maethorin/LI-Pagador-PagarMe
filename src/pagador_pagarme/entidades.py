@@ -13,6 +13,12 @@ class PassosDeEnvio(object):
 class Malote(entidades.Malote):
     def __init__(self, configuracao):
         super(Malote, self).__init__(configuracao)
+        self.installments = None
+        self.free_installments = None
+        self.payment_method = 'credit_card'
+        self.capture = 'false'
+        self.amount = None
+        self.card_hash = None
         self._passo_atual = PassosDeEnvio.pre
         self._pedido = None
         self._dados = {}
@@ -21,24 +27,24 @@ class Malote(entidades.Malote):
         self._dados = dados
         self._passo_atual = dados['passo']
         self._pedido = pedido
-        pedido_pagamento = entidades.PedidoPagamento(self.configuracao.loja_id, pedido.numero, self.configuracao.meio_pagamento.codigo)
-        pedido_pagamento.preencher_do_banco()
+        self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
         if self._passo_atual == PassosDeEnvio.pre:
-            pass
-        if self._passo_atual == PassosDeEnvio.captura:
-            pass
+            self.card_hash = dados['cartao_hash']
+        if dados.get('cartao_parcelas_sem_juros', None) == 'true':
+            self.free_installments = self._parcelas
+            self.remove_atributo_da_serializacao('installments')
+        else:
+            self.installments = self._parcelas
+            self.remove_atributo_da_serializacao('free_installments')
+        self.capture = 'false' if self._passo_atual == PassosDeEnvio.pre else 'true'
 
     @property
     def _anti_fraude(self):
         return None
 
     @property
-    def _tem_parcelas(self):
-        return None
-
-    @property
-    def _items(self):
-        return []
+    def _parcelas(self):
+        return self._dados.get('cartao_parcelas', 1)
 
 
 class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):

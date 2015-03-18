@@ -138,14 +138,72 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre', 'cartao_parcelas': 3})
         entregador.servico.tem_parcelas.should.be.truthy
 
-    # @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
-    # def test_deve_processar_dados_de_pagamento(self):
-    #     entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
-    #     entregador._processa_resposta = mock.MagicMock()
-    #     entregador._processa_resposta.return_value = 'resposta-processada'
-    #     entregador.processa_dados_pagamento()
-    #     entregador._processa_resposta.assert_called_with()
-    #     entregador.resultado.should.be.equal('resposta-processada')
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_processar_dados_de_pagamento_define_dados_pagamento(self):
+        entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
+        entregador.configuracao = mock.MagicMock(aplicacao='test')
+        entregador.pedido = mock.MagicMock(valor_total=15.70)
+        entregador.servico = mock.MagicMock()
+        entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
+        entregador.processa_dados_pagamento()
+        entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa'}, 'transacao_id': 'transacao-id', 'valor_pago': 15.7})
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_processar_dados_de_pagamento_dispara_erro_se_invalido(self):
+        entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
+        entregador.malote = mock.MagicMock()
+        entregador.malote.to_dict.return_value = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
+        entregador.pedido = mock.MagicMock(numero=1234)
+        entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
+        entregador.processa_dados_pagamento.when.called_with().should.throw(
+            entregador.EnvioNaoRealizado,
+            '\n'.join([
+                'Pedido 1234 na Loja Id 8',
+                u'Dados inválidos enviados ao PAGAR.ME:',
+                u'\tcard_holder_name: Nome do portador do cartão está faltando',
+                u'\tcard_expiration_date: Data de expiração do cartão está faltando',
+                'Tentou enviar com os seguintes dados:',
+                "{'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}"
+            ])
+        )
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_processar_dados_de_pagamento_dispara_erro_sem_ser_parameter(self):
+        entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
+        entregador.malote = mock.MagicMock()
+        entregador.malote.to_dict.return_value = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
+        entregador.pedido = mock.MagicMock(numero=1234)
+        entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'whatever'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'whatever'}], u'method': u'post'})
+        entregador.processa_dados_pagamento.when.called_with().should.throw(
+            entregador.EnvioNaoRealizado,
+            '\n'.join([
+                'Pedido 1234 na Loja Id 8',
+                u'Dados inválidos enviados ao PAGAR.ME:',
+                u'\tNome do portador do cartão está faltando',
+                u'\tData de expiração do cartão está faltando',
+                'Tentou enviar com os seguintes dados:',
+                "{'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}"
+            ])
+        )
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_processar_dados_de_pagamento_define_identificador_id(self):
+        entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
+        entregador.configuracao = mock.MagicMock(aplicacao='test')
+        entregador.pedido = mock.MagicMock(valor_total=15.70)
+        entregador.servico = mock.MagicMock()
+        entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
+        entregador.processa_dados_pagamento()
+        entregador.identificacao_pagamento.should.be.equal('identificacao-id')
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_processar_dados_de_pagamento_chama_processar_de_servico(self):
+        entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
+        entregador.configuracao = mock.MagicMock(aplicacao='test')
+        entregador.pedido = mock.MagicMock(valor_total=15.70)
+        entregador.servico = mock.MagicMock()
+        entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
+        entregador.processa_dados_pagamento()
+        entregador.servico.processa_dados_pagamento.assert_called_with()
 
     # @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     # def test_deve_processar_resposta_sucesso(self):
@@ -265,6 +323,30 @@ class PreEnviandoPagamento(unittest.TestCase):
         pre_envio.envia_pagamento()
         pre_envio.conexao.post.assert_called_with('url-envio', 'malote')
 
+    def test_processa_pagamento_adiciona_dados_de_parcelas_com_juros(self):
+        pre_envio = servicos.PreEnvio(1234)
+        pre_envio.dados = {'cartao_parcelas': 3, 'cartao_valor_parcela': 15.68, 'cartao_parcelas_sem_juros': 'false'}
+        pre_envio.entrega = mock.MagicMock()
+        pre_envio.entrega.dados_pagamento = {'conteudo_json': {}}
+        pre_envio.processa_dados_pagamento()
+        pre_envio.entrega.dados_pagamento.should.be.equal({'conteudo_json': {'numero_parcelas': 3, 'sem_juros': False, 'valor_parcela': 15.68}})
+
+    def test_processa_pagamento_adiciona_dados_de_parcelas_sem_juros(self):
+        pre_envio = servicos.PreEnvio(1234)
+        pre_envio.dados = {'cartao_parcelas': 3, 'cartao_valor_parcela': 15.68, 'cartao_parcelas_sem_juros': 'true'}
+        pre_envio.entrega = mock.MagicMock()
+        pre_envio.entrega.dados_pagamento = {'conteudo_json': {}}
+        pre_envio.processa_dados_pagamento()
+        pre_envio.entrega.dados_pagamento.should.be.equal({'conteudo_json': {'numero_parcelas': 3, 'sem_juros': True, 'valor_parcela': 15.68}})
+
+    def test_processa_pagamento_nao_adiciona_dados_de_parcelas(self):
+        pre_envio = servicos.PreEnvio(1234)
+        pre_envio.dados = {'cartao_parcelas': 1}
+        pre_envio.entrega = mock.MagicMock()
+        pre_envio.entrega.dados_pagamento = {'conteudo_json': {}}
+        pre_envio.processa_dados_pagamento()
+        pre_envio.entrega.dados_pagamento.should.be.equal({'conteudo_json': {}})
+
 
 class CompletandoPagamento(unittest.TestCase):
     def test_tem_conexao(self):
@@ -279,31 +361,37 @@ class CompletandoPagamento(unittest.TestCase):
         completa_pagamento = servicos.CompletaPagamento(1234)
         completa_pagamento.entrega.should.be.none
 
-    def test_envia_post_define_dados_da_entrega(self):
+    @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
+    def test_envia_post_cria_pedido_pagamento(self, entidade_pagador_mock):
         completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.configuracao = mock.MagicMock(loja_id=8, meio_pagamento=mock.MagicMock(codigo='pagarme'))
+        completa_pagamento.pedido = mock.MagicMock(numero=1234)
         completa_pagamento.entrega = mock.MagicMock()
         completa_pagamento.conexao = mock.MagicMock()
-        completa_pagamento.malote = mock.MagicMock()
-        completa_pagamento.malote.to_dict.return_value = 'malote'
         completa_pagamento.envia_pagamento()
-        completa_pagamento.entrega.dados_enviados.should.be.equal('malote')
+        entidade_pagador_mock.assert_called_with('PedidoPagamento', loja_id=8, pedido_numero=1234, codigo_pagamento='pagarme')
+        entidade_pagador_mock.return_value.preencher_do_banco.assert_called_with()
 
-    def test_envia_post_define_resposta_da_entrega(self):
+    @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
+    def test_envia_post_com_identificador_id(self, entidade_pagador_mock):
+        entidade_pagador_mock.return_value.identificador_id = 'id-pagamento'
         completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.url = 'https://primeira.parte.da/url'
+        completa_pagamento.configuracao = mock.MagicMock(loja_id=8, meio_pagamento=mock.MagicMock(codigo='pagarme'))
+        completa_pagamento.pedido = mock.MagicMock(numero=1234)
         completa_pagamento.entrega = mock.MagicMock()
         completa_pagamento.conexao = mock.MagicMock()
-        completa_pagamento.conexao.post.return_value = 'resposta'
-        completa_pagamento.malote = mock.MagicMock()
-        completa_pagamento.malote.to_dict.return_value = 'malote'
         completa_pagamento.envia_pagamento()
-        completa_pagamento.entrega.resposta.should.be.equal('resposta')
+        completa_pagamento.conexao.post.assert_called_with('https://primeira.parte.da/url/id-pagamento/capture')
 
-    def test_envia_post_chama_post_de_conexao(self):
+    def test_processa_dados_pagamento_define_situacao_pedido_pago(self):
         completa_pagamento = servicos.CompletaPagamento(1234)
-        completa_pagamento.entrega = mock.MagicMock()
-        completa_pagamento.conexao = mock.MagicMock()
-        completa_pagamento.url = 'url-envio'
-        completa_pagamento.malote = mock.MagicMock()
-        completa_pagamento.malote.to_dict.return_value = 'malote'
-        completa_pagamento.envia_pagamento()
-        completa_pagamento.conexao.post.assert_called_with('url-envio', 'malote')
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'paid'}))
+        completa_pagamento.processa_dados_pagamento()
+        completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
+
+    def test_processa_dados_pagamento_define_situacao_pedido_recusado(self):
+        completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'refused'}))
+        completa_pagamento.processa_dados_pagamento()
+        completa_pagamento.entrega.resultado.should.be.equal({'sucesso': False})

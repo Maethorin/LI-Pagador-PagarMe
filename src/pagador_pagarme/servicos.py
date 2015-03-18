@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from li_common.comunicacao import requisicao
 
 from pagador import settings, servicos
@@ -34,11 +35,14 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.servico = CompletaPagamento(loja_id, plano_indice, dados=dados)
         self.tem_malote = True
         self.faz_http = True
+        # self.conexao = self.obter_conexao(formato_envio=requisicao.Formato.form_urlencode)
+        # self.url = 'https://api.pagar.me/1/transactions'
         self.servico.conexao = self.obter_conexao(formato_envio=requisicao.Formato.form_urlencode)
         self.servico.url = 'https://api.pagar.me/1/transactions'
         self.servico.entrega = self
 
     def define_credenciais(self):
+        # self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
         self.servico.conexao.credenciador = Credenciador(configuracao=self.configuracao)
 
     def define_pedido_e_configuracao(self, pedido_numero):
@@ -52,9 +56,42 @@ class EntregaPagamento(servicos.EntregaPagamento):
 
     def envia_pagamento(self, tentativa=1):
         self.servico.envia_pagamento(tentativa)
+        # if self.dados['passo'] == PassosDeEnvio.pre:
+        #     self.dados_enviados = self.malote.to_dict()
+        #     self.resposta = self.conexao.post(self.url, self.dados_enviados)
+        # else:
+        #     pedido_pagamento = self.cria_entidade_pagador('PedidoPagamento', loja_id=self.configuracao.loja_id, pedido_numero=self.pedido.numero, codigo_pagamento=self.configuracao.meio_pagamento.codigo)
+        #     pedido_pagamento.preencher_do_banco()
+        #     self.resposta = self.conexao.post('{}/{}/capture'.format(self.url, pedido_pagamento.identificador_id))
 
-    # def processa_dados_pagamento(self):
-    #     raise self.EnvioNaoRealizado(u'Ocorreram erros no envio dos dados para o PAGAR.ME', self.loja_id, self.pedido.numero, dados_envio=self.malote.to_dict(), erros=self.servico.resposta.conteudo)
+    def processa_dados_pagamento(self):
+        if self.resposta.sucesso:
+            self.dados_pagamento = {
+                'transacao_id': self.resposta.conteudo['tid'],
+                'valor_pago': self.pedido.valor_total,
+                'conteudo_json': {
+                    'bandeira': self.resposta.conteudo['card_brand'],
+                    'aplicacao': self.configuracao.aplicacao
+                }
+            }
+            self.identificacao_pagamento = self.resposta.conteudo['id']
+            self.servico.processa_dados_pagamento()
+        if self.resposta.requisicao_invalida:
+            erros = self.resposta.conteudo.get('errors', None)
+            if erros:
+                mensagens = []
+                for erro in erros:
+                    if erro['type'] == 'invalid_parameter':
+                        mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
+                    else:
+                        mensagens.append(erro['message'])
+                raise self.EnvioNaoRealizado(
+                    u'Dados inválidos enviados ao PAGAR.ME',
+                    self.loja_id,
+                    self.pedido.numero,
+                    dados_envio=self.malote.to_dict(),
+                    erros=mensagens
+                )
 
 
 class PreEnvio(servicos.EntregaPagamento):
@@ -68,22 +105,14 @@ class PreEnvio(servicos.EntregaPagamento):
         self.entrega.dados_enviados = self.malote.to_dict()
         self.entrega.resposta = self.conexao.post(self.url, self.entrega.dados_enviados)
 
-    # def processa_dados_pagamento(self):
-    #     self.dados_pagamento = {
-    #         'transacao_id': self.resposta.conteudo['chave'],
-    #         'valor_pago': self.pedido.valor_total,
-    #         'conteudo_json': {
-    #             'bandeira': self.resposta.conteudo['chave'],
-    #             'aplicacao': self.configuracao.aplicacao
-    #         }
-    #     }
-    #     if self.tem_parcelas:
-    #         self.dados_pagamento['conteudo_json'].update({
-    #             'numero_parcelas': int(self.dados['cartao_parcelas']),
-    #             'valor_parcela': float(self.dados['cartao_valor_parcela']),
-    #             'sem_juros': self.dados['cartao_parcelas_sem_juros'] == 'true'
-    #         })
-    #     self.identificacao_pagamento = self.resposta.conteudo['chave']
+    def processa_dados_pagamento(self):
+        if self.tem_parcelas:
+            self.entrega.dados_pagamento['conteudo_json'].update({
+                'numero_parcelas': int(self.dados['cartao_parcelas']),
+                'valor_parcela': float(self.dados['cartao_valor_parcela']),
+                'sem_juros': self.dados['cartao_parcelas_sem_juros'] == 'true'
+            })
+        self.entrega.resultado = {'sucesso': self.entrega.resposta.conteudo['status'] == 'authorized'}
 
     @property
     def tem_parcelas(self):
@@ -99,15 +128,13 @@ class CompletaPagamento(servicos.EntregaPagamento):
         self.entrega = None
 
     def envia_pagamento(self, tentativa=1):
-        self.entrega.dados_enviados = self.malote.to_dict()
-        self.entrega.resposta = self.conexao.post(self.url, self.entrega.dados_enviados)
+        pedido_pagamento = self.cria_entidade_pagador('PedidoPagamento', loja_id=self.configuracao.loja_id, pedido_numero=self.pedido.numero, codigo_pagamento=self.configuracao.meio_pagamento.codigo)
+        pedido_pagamento.preencher_do_banco()
+        self.entrega.resposta = self.conexao.post('{}/{}/capture'.format(self.url, pedido_pagamento.identificador_id))
 
-    # def processa_dados_pagamento(self):
-    #     self.dados_pagamento = {
-    #         'transacao_id': self.resposta.conteudo['chave'],
-    #         'identificador_id': self.resposta.conteudo['chave'],
-    #     }
-    #     self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['chave'])
+    def processa_dados_pagamento(self):
+        self.entrega.situacao_pedido = SituacoesDePagamento.do_tipo(self.entrega.resposta.conteudo['status'])
+        self.entrega.resultado = {'sucesso': self.entrega.situacao_pedido == SituacoesDePagamento.DE_PARA['paid']}
 
 
 class SituacoesDePagamento(servicos.SituacoesDePagamento):
