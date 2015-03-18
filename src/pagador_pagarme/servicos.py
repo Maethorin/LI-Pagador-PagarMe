@@ -35,14 +35,11 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.servico = CompletaPagamento(loja_id, plano_indice, dados=dados)
         self.tem_malote = True
         self.faz_http = True
-        # self.conexao = self.obter_conexao(formato_envio=requisicao.Formato.form_urlencode)
-        # self.url = 'https://api.pagar.me/1/transactions'
         self.servico.conexao = self.obter_conexao(formato_envio=requisicao.Formato.form_urlencode)
         self.servico.url = 'https://api.pagar.me/1/transactions'
         self.servico.entrega = self
 
     def define_credenciais(self):
-        # self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
         self.servico.conexao.credenciador = Credenciador(configuracao=self.configuracao)
 
     def define_pedido_e_configuracao(self, pedido_numero):
@@ -56,13 +53,6 @@ class EntregaPagamento(servicos.EntregaPagamento):
 
     def envia_pagamento(self, tentativa=1):
         self.servico.envia_pagamento(tentativa)
-        # if self.dados['passo'] == PassosDeEnvio.pre:
-        #     self.dados_enviados = self.malote.to_dict()
-        #     self.resposta = self.conexao.post(self.url, self.dados_enviados)
-        # else:
-        #     pedido_pagamento = self.cria_entidade_pagador('PedidoPagamento', loja_id=self.configuracao.loja_id, pedido_numero=self.pedido.numero, codigo_pagamento=self.configuracao.meio_pagamento.codigo)
-        #     pedido_pagamento.preencher_do_banco()
-        #     self.resposta = self.conexao.post('{}/{}/capture'.format(self.url, pedido_pagamento.identificador_id))
 
     def processa_dados_pagamento(self):
         if self.resposta.sucesso:
