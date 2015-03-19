@@ -48,8 +48,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.servico.pedido = self.pedido
 
     def montar_malote(self):
-        super(EntregaPagamento, self).montar_malote()
-        self.servico.malote = self.malote
+        self.servico.extensao = self.extensao
+        self.servico.montar_malote()
 
     def envia_pagamento(self, tentativa=1):
         self.servico.envia_pagamento(tentativa)
@@ -58,11 +58,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         if self.resposta.sucesso:
             self.dados_pagamento = {
                 'transacao_id': self.resposta.conteudo['tid'],
-                'valor_pago': self.pedido.valor_total,
-                'conteudo_json': {
-                    'bandeira': self.resposta.conteudo['card_brand'],
-                    'aplicacao': self.configuracao.aplicacao
-                }
+                'valor_pago': self.pedido.valor_total
             }
             self.identificacao_pagamento = self.resposta.conteudo['id']
             self.servico.processa_dados_pagamento()
@@ -96,6 +92,12 @@ class PreEnvio(servicos.EntregaPagamento):
         self.entrega.resposta = self.conexao.post(self.url, self.entrega.dados_enviados)
 
     def processa_dados_pagamento(self):
+        self.entrega.dados_pagamento = {
+            'conteudo_json': {
+                'bandeira': self.entrega.resposta.conteudo['card_brand'],
+                'aplicacao': self.configuracao.aplicacao
+            }
+        }
         if self.tem_parcelas:
             self.entrega.dados_pagamento['conteudo_json'].update({
                 'numero_parcelas': int(self.dados['cartao_parcelas']),
@@ -108,6 +110,9 @@ class PreEnvio(servicos.EntregaPagamento):
     def tem_parcelas(self):
         parcelas = self.dados.get('cartao_parcelas', 1)
         return int(parcelas) > 1
+
+    def montar_malote(self):
+        super(PreEnvio, self).montar_malote()
 
 
 class CompletaPagamento(servicos.EntregaPagamento):
@@ -125,6 +130,9 @@ class CompletaPagamento(servicos.EntregaPagamento):
     def processa_dados_pagamento(self):
         self.entrega.situacao_pedido = SituacoesDePagamento.do_tipo(self.entrega.resposta.conteudo['status'])
         self.entrega.resultado = {'sucesso': self.entrega.situacao_pedido == SituacoesDePagamento.DE_PARA['paid']}
+
+    def montar_malote(self):
+        pass
 
 
 class SituacoesDePagamento(servicos.SituacoesDePagamento):
