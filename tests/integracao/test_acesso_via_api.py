@@ -21,7 +21,7 @@ class PagarMeConfiguracaoMeioDePagamentoDaLoja(TestBase):
         response = self.app.get(self.url, follow_redirects=True, headers={'authorization': 'chave_aplicacao CHAVE-TESTE'})
         json.loads(response.data).should.be.equal({u'metadados': {u'api': u'API Pagador', u'resultado': u'sucesso', u'versao': u'1.0'}, u'sucesso': {u'configuracao_pagamento': u'PAGAR.ME'}})
         response.status_code.should.be.equal(200)
-        configuracao_mock.assert_called_with(loja_id=8, codigo_pagamento='pagarme')
+        configuracao_mock.assert_called_with(loja_id=8, codigo_pagamento='pagarme', eh_listagem=False)
 
     @mock.patch('pagador_pagarme.entidades.ConfiguracaoMeioPagamento')
     def test_deve_grava_dados_pagarme(self, configuracao_mock):
