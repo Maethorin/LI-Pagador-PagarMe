@@ -69,6 +69,6 @@ class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
         self.campos = ['ativo', 'aplicacao', 'usuario', 'token', 'senha', 'usar_antifraude', 'juros_valor', 'valor_minimo_aceitado', 'valor_minimo_parcela', 'mostrar_parcelamento', 'parcelas_sem_juros', 'maximo_parcelas']
         self.codigo_gateway = CODIGO_GATEWAY
         self.eh_gateway = True
-        super(ConfiguracaoMeioPagamento, self).__init__(loja_id, codigo_pagamento, eh_listagem)
+        super(ConfiguracaoMeioPagamento, self).__init__(loja_id, codigo_pagamento, eh_listagem=eh_listagem)
         self.formulario = cadastro.FormularioPagarMe()
         self.url_card_hash = 'https://pagar.me/assets/pagarme-v2.min.js'
