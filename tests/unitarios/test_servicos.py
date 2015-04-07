@@ -150,8 +150,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     def test_processar_dados_de_pagamento_dispara_erro_se_invalido(self):
         entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
-        entregador.malote = mock.MagicMock()
-        entregador.malote.to_dict.return_value = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
+        entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         entregador.pedido = mock.MagicMock(numero=1234)
         entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
         entregador.processa_dados_pagamento.when.called_with().should.throw(
@@ -169,8 +168,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     def test_processar_dados_de_pagamento_dispara_erro_sem_ser_parameter(self):
         entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
-        entregador.malote = mock.MagicMock()
-        entregador.malote.to_dict.return_value = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
+        entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         entregador.pedido = mock.MagicMock(numero=1234)
         entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'whatever'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'whatever'}], u'method': u'post'})
         entregador.processa_dados_pagamento.when.called_with().should.throw(

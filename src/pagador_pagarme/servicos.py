@@ -75,7 +75,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
                     u'Dados inválidos enviados ao PAGAR.ME',
                     self.loja_id,
                     self.pedido.numero,
-                    dados_envio=self.malote.to_dict(),
+                    dados_envio=self.dados_enviados,
                     erros=mensagens
                 )
 
