@@ -35,7 +35,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.servico = CompletaPagamento(loja_id, plano_indice, dados=dados)
         self.tem_malote = True
         self.faz_http = True
-        self.servico.conexao = self.obter_conexao(formato_envio=requisicao.Formato.form_urlencode)
+        self.servico.conexao = self.obter_conexao()
         self.servico.url = 'https://api.pagar.me/1/transactions'
         self.servico.entrega = self
 
