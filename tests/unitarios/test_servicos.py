@@ -71,7 +71,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         obter_mock.return_value = 'conexao'
         entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
         entregador.servico.conexao.should.be.equal('conexao')
-        obter_mock.assert_called_with(formato_envio='application/x-www-form-urlencoded')
+        obter_mock.assert_called_with()
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     @mock.patch('pagador_pagarme.servicos.Credenciador')
