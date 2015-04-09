@@ -18,7 +18,7 @@ class PassosDeEnvio(object):
 class Credenciador(servicos.Credenciador):
     def __init__(self, tipo=None, configuracao=None):
         super(Credenciador, self).__init__(tipo, configuracao)
-        self.tipo = self.TipoAutenticacao.form_urlencode
+        self.tipo = self.TipoAutenticacao.query_string
         self.chave_api = str(getattr(self.configuracao, 'token', ''))
         self.chave = 'api_key'
 
@@ -62,7 +62,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             }
             self.identificacao_pagamento = self.resposta.conteudo['id']
             self.servico.processa_dados_pagamento()
-        if self.resposta.requisicao_invalida:
+        elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             erros = self.resposta.conteudo.get('errors', None)
             if erros:
                 mensagens = []
@@ -71,13 +71,22 @@ class EntregaPagamento(servicos.EntregaPagamento):
                         mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
                     else:
                         mensagens.append(erro['message'])
+                titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
                 raise self.EnvioNaoRealizado(
-                    u'Dados inválidos enviados ao PAGAR.ME',
+                    titulo,
                     self.loja_id,
                     self.pedido.numero,
                     dados_envio=self.dados_enviados,
                     erros=mensagens
                 )
+        else:
+            raise self.EnvioNaoRealizado(
+                u'A comunicação com o PAGAR.ME falhou.',
+                self.loja_id,
+                self.pedido.numero,
+                dados_envio=self.dados_enviados,
+                erros=[u'Não foi obtida uma resposta válida.']
+            )
 
 
 class PreEnvio(servicos.EntregaPagamento):
