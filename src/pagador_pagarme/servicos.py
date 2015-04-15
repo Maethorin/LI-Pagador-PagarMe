@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from li_common.comunicacao import requisicao
-
-from pagador import settings, servicos
+import json
+from pagador import servicos
 
 
 class Ambiente(object):
@@ -36,7 +35,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.tem_malote = True
         self.faz_http = True
         self.servico.conexao = self.obter_conexao()
-        self.servico.url = 'https://api.pagar.me/1/transactions'
+        self.url = 'https://api.pagar.me/1/transactions'
+        self.servico.url = self.url
         self.servico.entrega = self
 
     def define_credenciais(self):
@@ -54,6 +54,27 @@ class EntregaPagamento(servicos.EntregaPagamento):
     def envia_pagamento(self, tentativa=1):
         self.servico.envia_pagamento(tentativa)
 
+    def _verifica_erro_em_conteudo(self, titulo):
+        mensagens = []
+        if self.resposta.conteudo:
+            erros = self.resposta.conteudo.get('errors', None)
+            if erros:
+                for erro in erros:
+                    if erro['type'] == 'invalid_parameter':
+                        mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
+                    else:
+                        mensagens.append(erro['message'])
+            else:
+                mensagens.append(json.dumps(self.resposta.conteudo))
+        if mensagens:
+            raise self.EnvioNaoRealizado(
+                titulo,
+                self.loja_id,
+                self.pedido.numero,
+                dados_envio=self.dados_enviados,
+                erros=mensagens
+            )
+
     def processa_dados_pagamento(self):
         if self.resposta.sucesso:
             self.dados_pagamento = {
@@ -63,30 +84,10 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.identificacao_pagamento = self.resposta.conteudo['id']
             self.servico.processa_dados_pagamento()
         elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
-            erros = self.resposta.conteudo.get('errors', None)
-            if erros:
-                mensagens = []
-                for erro in erros:
-                    if erro['type'] == 'invalid_parameter':
-                        mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
-                    else:
-                        mensagens.append(erro['message'])
-                titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
-                raise self.EnvioNaoRealizado(
-                    titulo,
-                    self.loja_id,
-                    self.pedido.numero,
-                    dados_envio=self.dados_enviados,
-                    erros=mensagens
-                )
+            titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
+            self._verifica_erro_em_conteudo(titulo)
         else:
-            raise self.EnvioNaoRealizado(
-                u'A comunicação com o PAGAR.ME falhou.',
-                self.loja_id,
-                self.pedido.numero,
-                dados_envio=self.dados_enviados,
-                erros=[u'Não foi obtida uma resposta válida.']
-            )
+            self._verifica_erro_em_conteudo(u'Não foi obtida uma resposta válida do PAGAR.ME. Nosso equipe técnica está avaliando o problema.')
 
 
 class PreEnvio(servicos.EntregaPagamento):
