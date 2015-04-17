@@ -60,17 +60,11 @@ class FormularioPagarMe(unittest.TestCase):
         self.formulario.mostrar_parcelamento.label.should.be.equal(u'Marque para mostrar o parcelamento na listagem e na página do produto.')
         self.formulario.mostrar_parcelamento.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.boleano)
 
-    def test_deve_ter_maximo_parcelas(self):
-        self.formulario.maximo_parcelas.nome.should.be.equal('maximo_parcelas')
-        self.formulario.maximo_parcelas.ordem.should.be.equal(8)
-        self.formulario.maximo_parcelas.label.should.be.equal(u'Máximo de parcelas')
-        self.formulario.maximo_parcelas.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.escolha)
-
     def test_deve_ter_quantidade_certa_parcelas(self):
         self.formulario._PARCELAS.should.be.equal([(12, 'Todas'), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9), (10, 10), (11, 11)])
 
     def test_deve_ter_parcelas_sem_juros(self):
         self.formulario.parcelas_sem_juros.nome.should.be.equal('parcelas_sem_juros')
-        self.formulario.parcelas_sem_juros.ordem.should.be.equal(9)
+        self.formulario.parcelas_sem_juros.ordem.should.be.equal(8)
         self.formulario.parcelas_sem_juros.label.should.be.equal('Parcelas sem juros')
         self.formulario.parcelas_sem_juros.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.escolha)

@@ -152,7 +152,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
         entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         entregador.pedido = mock.MagicMock(numero=1234)
-        entregador.resposta = mock.MagicMock(sucesso=False, nao_autorizado=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
+        entregador.resposta = mock.MagicMock(status_code=400, sucesso=False, nao_autorizado=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
         entregador.processa_dados_pagamento.when.called_with().should.throw(
             entregador.EnvioNaoRealizado,
             '\n'.join([
@@ -160,6 +160,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
                 u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.:',
                 u'\tcard_holder_name: Nome do portador do cartão está faltando',
                 u'\tcard_expiration_date: Data de expiração do cartão está faltando',
+                '\tHTTP STATUS CODE: 400',
                 'Tentou enviar com os seguintes dados:',
                 "{'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}"
             ])
@@ -170,7 +171,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
         entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         entregador.pedido = mock.MagicMock(numero=1234)
-        entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=True, nao_autorizado=False, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'whatever'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'whatever'}], u'method': u'post'})
+        entregador.resposta = mock.MagicMock(status_code=400, sucesso=False, requisicao_invalida=True, nao_autorizado=False, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'whatever'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'whatever'}], u'method': u'post'})
         entregador.processa_dados_pagamento.when.called_with().should.throw(
             entregador.EnvioNaoRealizado,
             '\n'.join([
@@ -178,6 +179,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
                 u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.:',
                 u'\tNome do portador do cartão está faltando',
                 u'\tData de expiração do cartão está faltando',
+                '\tHTTP STATUS CODE: 400',
                 'Tentou enviar com os seguintes dados:',
                 "{'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}"
             ])
@@ -188,13 +190,14 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador = servicos.EntregaPagamento(8, dados={'passo': 'pre'})
         entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         entregador.pedido = mock.MagicMock(numero=1234)
-        entregador.resposta = mock.MagicMock(sucesso=False, requisicao_invalida=False, nao_autorizado=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'api_key inválida', u'type': u'whatever'}], u'method': u'post'})
+        entregador.resposta = mock.MagicMock(status_code=403, sucesso=False, requisicao_invalida=False, nao_autorizado=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'api_key inválida', u'type': u'whatever'}], u'method': u'post'})
         entregador.processa_dados_pagamento.when.called_with().should.throw(
             entregador.EnvioNaoRealizado,
             '\n'.join([
                 'Pedido 1234 na Loja Id 8',
                 u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.:',
                 u'\tapi_key inválida',
+                '\tHTTP STATUS CODE: 403',
                 'Tentou enviar com os seguintes dados:',
                 "{'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}"
             ])

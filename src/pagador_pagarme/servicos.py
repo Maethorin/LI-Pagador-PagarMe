@@ -66,14 +66,14 @@ class EntregaPagamento(servicos.EntregaPagamento):
                         mensagens.append(erro['message'])
             else:
                 mensagens.append(json.dumps(self.resposta.conteudo))
-        if mensagens:
-            raise self.EnvioNaoRealizado(
-                titulo,
-                self.loja_id,
-                self.pedido.numero,
-                dados_envio=self.dados_enviados,
-                erros=mensagens
-            )
+        mensagens.append(u'HTTP STATUS CODE: {}'.format(self.resposta.status_code))
+        raise self.EnvioNaoRealizado(
+            titulo,
+            self.loja_id,
+            self.pedido.numero,
+            dados_envio=self.dados_enviados,
+            erros=mensagens
+        )
 
     def processa_dados_pagamento(self):
         if self.resposta.sucesso:
