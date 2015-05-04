@@ -353,3 +353,39 @@ class CompletandoPagamento(unittest.TestCase):
         completa_pagamento = servicos.CompletaPagamento(1234)
         completa_pagamento.montar_malote()
         montar_mock.called.should.be.falsy
+
+
+class PagarMeRegistrandoNotificacao(unittest.TestCase):
+    def test_nao_deve_definir_redirect(self):
+        registrador = servicos.RegistraNotificacao(1234, {})
+        registrador.redirect_para.should.be.none
+
+    def test_deve_montar_dados_pagamento(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
+        registrador.monta_dados_pagamento()
+        registrador.dados_pagamento.should.be.equal({'transacao_id': 1234})
+
+    def test_deve_definir_situacao_pedido_pago(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
+        registrador.monta_dados_pagamento()
+        registrador.situacao_pedido.should.be.equal(servicos.servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO)
+
+    def test_deve_definir_situacao_pedido_devolvido(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'refunded'})
+        registrador.monta_dados_pagamento()
+        registrador.situacao_pedido.should.be.equal(servicos.servicos.SituacaoPedido.SITUACAO_PAGTO_DEVOLVIDO)
+
+    def test_deve_definir_situacao_pedido_como_none_se_desconhecido(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'zas'})
+        registrador.monta_dados_pagamento()
+        registrador.situacao_pedido.should.be.none
+
+    def test_deve_definir_situacao_pedido_como_none_se_desconhecido(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'zas'})
+        registrador.monta_dados_pagamento()
+        registrador.situacao_pedido.should.be.none
+
+    def test_deve_retornar_resultado_ok(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
+        registrador.monta_dados_pagamento()
+        registrador.resultado.should.be.equal({'resultado': 'OK'})

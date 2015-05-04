@@ -31,6 +31,7 @@ class Malote(entidades.Malote):
         self.capture = 'false'
         self.amount = None
         self.card_hash = None
+        self.postback_url = None
         self.customer = None
         self.metadata = None
 
@@ -44,6 +45,8 @@ class Malote(entidades.Malote):
         else:
             self.installments = parcelas
             self.remove_atributo_da_serializacao('free_installments')
+        url_notificacao = settings.NOTIFICACAO_URL.format('pagarme', self.configuracao.loja_id)
+        self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         self.customer = Cliente(
             name=pedido.cliente['nome'],
             document_number=pedido.cliente_documento,

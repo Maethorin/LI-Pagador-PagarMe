@@ -147,6 +147,31 @@ class CompletaPagamento(servicos.EntregaPagamento):
 
 class SituacoesDePagamento(servicos.SituacoesDePagamento):
     DE_PARA = {
+        'processing': servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE,
         'paid': servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO,
-        'refused': servicos.SituacaoPedido.SITUACAO_PEDIDO_CANCELADO
+        'refused': servicos.SituacaoPedido.SITUACAO_PEDIDO_CANCELADO,
+        'refunded': servicos.SituacaoPedido.SITUACAO_PAGTO_DEVOLVIDO
     }
+
+
+class RegistraNotificacao(servicos.RegistraResultado):
+    def __init__(self, loja_id, dados=None):
+        super(RegistraNotificacao, self).__init__(loja_id, dados)
+
+    @property
+    def transacao_id(self):
+        return self.dados.get('id', None)
+
+    @property
+    def pedido_id(self):
+        return self.dados.get('referencia', None)
+
+    @property
+    def status(self):
+        return self.dados.get('current_status', None)
+
+    def monta_dados_pagamento(self):
+        self.pedido_numero = self.pedido_id
+        self.dados_pagamento['transacao_id'] = self.transacao_id
+        self.situacao_pedido = SituacoesDePagamento.do_tipo(self.status)
+        self.resultado = {'resultado': 'OK'}
