@@ -143,9 +143,9 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador = servicos.EntregaPagamento(1234, dados={'passo': 'pre'})
         entregador.pedido = mock.MagicMock(valor_total=15.70)
         entregador.servico = mock.MagicMock()
-        entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
+        entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'id': 'identificacao-id', 'card_brand': 'visa'})
         entregador.processa_dados_pagamento()
-        entregador.dados_pagamento.should.be.equal({'transacao_id': 'transacao-id', 'valor_pago': 15.7})
+        entregador.dados_pagamento.should.be.equal({'transacao_id': 'identificacao-id', 'valor_pago': 15.7})
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     def test_processar_dados_de_pagamento_dispara_erro_se_invalido(self):
@@ -338,7 +338,7 @@ class CompletandoPagamento(unittest.TestCase):
 
     def test_processa_dados_pagamento_define_situacao_pedido_pago(self):
         completa_pagamento = servicos.CompletaPagamento(1234)
-        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'paid'}))
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}))
         completa_pagamento.processa_dados_pagamento()
         completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
 
@@ -360,10 +360,10 @@ class PagarMeRegistrandoNotificacao(unittest.TestCase):
         registrador = servicos.RegistraNotificacao(1234, {})
         registrador.redirect_para.should.be.none
 
-    def test_deve_montar_dados_pagamento(self):
+    def test_nao_deve_montar_dados_pagamento(self):
         registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
         registrador.monta_dados_pagamento()
-        registrador.dados_pagamento.should.be.equal({'transacao_id': 1234})
+        registrador.dados_pagamento.should.be.empty
 
     def test_deve_definir_situacao_pedido_pago(self):
         registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})

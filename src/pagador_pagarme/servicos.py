@@ -78,7 +78,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
     def processa_dados_pagamento(self):
         if self.resposta.sucesso:
             self.dados_pagamento = {
-                'transacao_id': self.resposta.conteudo['tid'],
+                'transacao_id': self.resposta.conteudo['id'],
                 'valor_pago': self.pedido.valor_total
             }
             self.identificacao_pagamento = self.resposta.conteudo['id']
@@ -114,7 +114,7 @@ class PreEnvio(servicos.EntregaPagamento):
                 'valor_parcela': float(self.dados['cartao_valor_parcela']),
                 'sem_juros': self.dados['cartao_parcelas_sem_juros'] == 'true'
             })
-        self.entrega.resultado = {'sucesso': self.entrega.resposta.conteudo['status'] == 'authorized'}
+        self.entrega.resultado = {'sucesso': self.entrega.resposta.conteudo['status'] == 'processing'}
 
     @property
     def tem_parcelas(self):
@@ -139,7 +139,7 @@ class CompletaPagamento(servicos.EntregaPagamento):
 
     def processa_dados_pagamento(self):
         self.entrega.situacao_pedido = SituacoesDePagamento.do_tipo(self.entrega.resposta.conteudo['status'])
-        self.entrega.resultado = {'sucesso': self.entrega.situacao_pedido == SituacoesDePagamento.DE_PARA['paid']}
+        self.entrega.resultado = {'sucesso': self.entrega.situacao_pedido == SituacoesDePagamento.DE_PARA['processing']}
 
     def montar_malote(self):
         pass
@@ -148,8 +148,11 @@ class CompletaPagamento(servicos.EntregaPagamento):
 class SituacoesDePagamento(servicos.SituacoesDePagamento):
     DE_PARA = {
         'processing': servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE,
+        'authorized': servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE,
         'paid': servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO,
         'refused': servicos.SituacaoPedido.SITUACAO_PEDIDO_CANCELADO,
+        'waiting_payment': servicos.SituacaoPedido.SITUACAO_AGUARDANDO_PAGTO,
+        'pending_refund': servicos.SituacaoPedido.SITUACAO_PAGTO_EM_DISPUTA,
         'refunded': servicos.SituacaoPedido.SITUACAO_PAGTO_DEVOLVIDO
     }
 
@@ -172,6 +175,5 @@ class RegistraNotificacao(servicos.RegistraResultado):
 
     def monta_dados_pagamento(self):
         self.pedido_numero = self.pedido_id
-        self.dados_pagamento['transacao_id'] = self.transacao_id
         self.situacao_pedido = SituacoesDePagamento.do_tipo(self.status)
         self.resultado = {'resultado': 'OK'}
