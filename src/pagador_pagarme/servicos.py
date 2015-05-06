@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import json
+from time import sleep
 from pagador import servicos
+
+
+TEMPO_MAXIMO_ESPERA_NOTIFICACAO = 30
 
 
 class Ambiente(object):
@@ -141,6 +145,14 @@ class CompletaPagamento(servicos.EntregaPagamento):
         self.entrega.resposta = self.conexao.post('{}/{}/capture'.format(self.url, pedido_pagamento.identificador_id))
 
     def processa_dados_pagamento(self):
+        tempo_espera = TEMPO_MAXIMO_ESPERA_NOTIFICACAO
+        while tempo_espera:
+            pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
+            if pedido.situacao_id != servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO:
+                self.entrega.resultado = {'sucesso': True}
+                return
+            sleep(1)
+            tempo_espera -= 1
         self.entrega.situacao_pedido = SituacoesDePagamento.do_tipo(self.entrega.resposta.conteudo['status'])
         self.entrega.resultado = {'sucesso': self.entrega.situacao_pedido == SituacoesDePagamento.DE_PARA['processing']}
 

@@ -336,17 +336,43 @@ class CompletandoPagamento(unittest.TestCase):
         completa_pagamento.envia_pagamento()
         completa_pagamento.conexao.post.assert_called_with('https://primeira.parte.da/url/id-pagamento/capture')
 
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processa_dados_pagamento_define_situacao_pedido_pago(self):
         completa_pagamento = servicos.CompletaPagamento(1234)
         completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}))
         completa_pagamento.processa_dados_pagamento()
         completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
 
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processa_dados_pagamento_define_situacao_pedido_recusado(self):
         completa_pagamento = servicos.CompletaPagamento(1234)
         completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'refused'}))
         completa_pagamento.processa_dados_pagamento()
         completa_pagamento.entrega.resultado.should.be.equal({'sucesso': False})
+
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 1)
+    @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
+    def test_processa_dados_pagamento_checa_se_situacao_pedido_mudou_sem_sucesso(self, cria_entidade_mock):
+        completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}))
+        completa_pagamento.pedido = mock.MagicMock(numero=1234)
+        completa_pagamento.configuracao = mock.MagicMock(loja_id=8)
+        cria_entidade_mock.return_value = mock.MagicMock(situacao_id=servicos.servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO)
+        completa_pagamento.processa_dados_pagamento()
+        cria_entidade_mock.assert_called_with('Pedido', numero=1234, loja_id=8)
+        completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
+
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 1)
+    @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
+    def test_processa_dados_pagamento_checa_se_situacao_pedido_mudou_com_sucesso(self, cria_entidade_mock):
+        completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}), situacao_pedido=None)
+        completa_pagamento.pedido = mock.MagicMock(numero=1234)
+        completa_pagamento.configuracao = mock.MagicMock(loja_id=8)
+        cria_entidade_mock.return_value = mock.MagicMock(situacao_id=servicos.servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO)
+        completa_pagamento.processa_dados_pagamento()
+        completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
+        completa_pagamento.entrega.situacao_pedido.should.be.none
 
     @mock.patch('pagador.servicos.EntregaPagamento.montar_malote')
     def test_nao_deve_montar_malote(self, montar_mock):
