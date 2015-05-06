@@ -352,7 +352,7 @@ class CompletandoPagamento(unittest.TestCase):
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 1)
     @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
-    def test_processa_dados_pagamento_checa_se_situacao_pedido_mudou_sem_sucesso(self, cria_entidade_mock):
+    def test_processa_dados_pagamento_checa_se_situacao_pedido_mudou_caso_efetuado(self, cria_entidade_mock):
         completa_pagamento = servicos.CompletaPagamento(1234)
         completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}))
         completa_pagamento.pedido = mock.MagicMock(numero=1234)
@@ -361,6 +361,20 @@ class CompletandoPagamento(unittest.TestCase):
         completa_pagamento.processa_dados_pagamento()
         cria_entidade_mock.assert_called_with('Pedido', numero=1234, loja_id=8)
         completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
+        completa_pagamento.entrega.situacao_pedido.should.be.equal(servicos.servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE)
+
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 1)
+    @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
+    def test_processa_dados_pagamento_checa_se_situacao_pedido_mudou_caso_em_analise(self, cria_entidade_mock):
+        completa_pagamento = servicos.CompletaPagamento(1234)
+        completa_pagamento.entrega = mock.MagicMock(resposta=mock.MagicMock(conteudo={'status': 'authorized'}))
+        completa_pagamento.pedido = mock.MagicMock(numero=1234)
+        completa_pagamento.configuracao = mock.MagicMock(loja_id=8)
+        cria_entidade_mock.return_value = mock.MagicMock(situacao_id=servicos.servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE)
+        completa_pagamento.processa_dados_pagamento()
+        cria_entidade_mock.assert_called_with('Pedido', numero=1234, loja_id=8)
+        completa_pagamento.entrega.resultado.should.be.equal({'sucesso': True})
+        completa_pagamento.entrega.situacao_pedido.should.be.equal(servicos.servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE)
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 1)
     @mock.patch('pagador_pagarme.servicos.CompletaPagamento.cria_entidade_pagador')
