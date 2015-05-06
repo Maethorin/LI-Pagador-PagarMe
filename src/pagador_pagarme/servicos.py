@@ -62,6 +62,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 for erro in erros:
                     if erro['type'] == 'invalid_parameter':
                         mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
+                    elif erro['type'] == 'action_forbidden' and 'refused' in erro['message']:
+                        return False
                     else:
                         mensagens.append(erro['message'])
             else:
@@ -85,7 +87,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.servico.processa_dados_pagamento()
         elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
-            self._verifica_erro_em_conteudo(titulo)
+            if not self._verifica_erro_em_conteudo(titulo):
+                self.resultado = {'sucesso': False, 'mensagem': u'nao_aprovado', 'fatal': True}
         else:
             self._verifica_erro_em_conteudo(u'Não foi obtida uma resposta válida do PAGAR.ME. Nosso equipe técnica está avaliando o problema.')
 
