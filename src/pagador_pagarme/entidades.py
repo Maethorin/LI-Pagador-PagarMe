@@ -3,6 +3,7 @@ from pagador import settings, entidades
 from pagador_pagarme import cadastro
 
 CODIGO_GATEWAY = 12
+GATEWAY = 'pagarme'
 
 
 class PassosDeEnvio(object):
@@ -28,7 +29,7 @@ class Malote(entidades.Malote):
         self.installments = None
         self.free_installments = None
         self.payment_method = 'credit_card'
-        self.capture = 'false'
+        self.capture = 'true'
         self.amount = None
         self.card_hash = None
         self.postback_url = None
@@ -36,16 +37,19 @@ class Malote(entidades.Malote):
         self.metadata = None
 
     def monta_conteudo(self, pedido, parametros_contrato=None, dados=None):
+        dados_pagamento = pedido.conteudo_json.get(GATEWAY, {})
+        if not dados_pagamento:
+            raise self.DadosInvalidos('O pedido não foi montado corretamente no checkout.')
         self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
-        self.card_hash = dados['cartao_hash']
-        parcelas = dados.get('cartao_parcelas', 1)
-        if dados.get('cartao_parcelas_sem_juros', None) == 'true':
+        self.card_hash = dados_pagamento['cartao']
+        parcelas = dados_pagamento.get('parcelas', 1)
+        if dados_pagamento.get('parcelas_sem_juros', None) == 'true':
             self.free_installments = parcelas
             self.remove_atributo_da_serializacao('installments')
         else:
             self.installments = parcelas
             self.remove_atributo_da_serializacao('free_installments')
-        url_notificacao = settings.NOTIFICACAO_URL.format('pagarme', self.configuracao.loja_id)
+        url_notificacao = settings.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
         self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         self.customer = Cliente(
             name=pedido.cliente['nome'],

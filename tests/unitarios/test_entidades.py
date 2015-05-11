@@ -59,29 +59,41 @@ class PagarMeMontandoMalote(unittest.TestCase):
             itens=[
                 entidades.entidades.ItemDePedido(nome='Produto 1', sku='PROD01', quantidade=1, preco_venda=Decimal('40.00')),
                 entidades.entidades.ItemDePedido(nome='Produto 2', sku='PROD02', quantidade=1, preco_venda=Decimal('50.00')),
-            ]
+            ],
+            conteudo_json={
+                'pagarme': {
+                    'nome_loja': 'Nome Loja',
+                    'cartao':  'cartao-hash',
+                    'parcelas':  1,
+                    'parcelas_sem_juros':  'false',
+                    'valor_parcela':  None,
+                }
+            }
         )
 
     def test_malote_deve_ter_propriedades(self):
-        entidades.Malote('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'false', 'customer': None, 'card_hash': None, 'free_installments': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
+        entidades.Malote('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'true', 'customer': None, 'card_hash': None, 'free_installments': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
 
     def test_deve_montar_conteudo_sem_parcelas(self):
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
-        dados = {'passo': 'pre', 'cartao_hash': 'cartao-hash', 'cartao_parcelas': 1}
         parametros = {}
-        malote.monta_conteudo(self.pedido, parametros, dados)
-        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'false', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 1, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
+        malote.monta_conteudo(self.pedido, parametros, {})
+        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 1, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
 
     def test_deve_montar_conteudo_com_parcelas_sem_juros(self):
+        self.pedido.conteudo_json['pagarme']['parcelas'] = 3
+        self.pedido.conteudo_json['pagarme']['parcelas_sem_juros'] = 'true'
+        self.pedido.conteudo_json['pagarme']['valor_parcela'] = '12.98'
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
-        dados = {'passo': 'pre', 'cartao_hash': 'cartao-hash', 'cartao_parcelas': 3, 'cartao_parcelas_sem_juros': 'true'}
         parametros = {}
-        malote.monta_conteudo(self.pedido, parametros, dados)
-        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'false', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'free_installments': 3, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
+        malote.monta_conteudo(self.pedido, parametros, {})
+        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'free_installments': 3, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
 
     def test_deve_montar_conteudo_com_parcelas_com_juros(self):
+        self.pedido.conteudo_json['pagarme']['parcelas'] = 3
+        self.pedido.conteudo_json['pagarme']['parcelas_sem_juros'] = 'false'
+        self.pedido.conteudo_json['pagarme']['valor_parcela'] = '12.98'
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
-        dados = {'passo': 'pre', 'cartao_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'cartao_parcelas': 3, 'cartao_parcelas_sem_juros': 'false', 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}}
         parametros = {}
-        malote.monta_conteudo(self.pedido, parametros, dados)
-        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'false', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 3, 'payment_method': 'credit_card', 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
+        malote.monta_conteudo(self.pedido, parametros, {})
+        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 3, 'payment_method': 'credit_card', 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
