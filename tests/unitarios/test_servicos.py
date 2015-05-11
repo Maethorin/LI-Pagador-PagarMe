@@ -108,10 +108,9 @@ class PagarMeEntregaPagamento(unittest.TestCase):
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processar_dados_de_pagamento_define_dados_pagamento(self):
-        self.entregador.pedido.valor_total = 15.70
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'processing', 'id': 'identificacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa'}, 'transacao_id': 'identificacao-id', 'valor_pago': 15.7})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     def test_processar_dados_de_pagamento_dispara_erro_se_invalido(self):
@@ -202,7 +201,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'false'}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'numero_parcelas': 3, 'sem_juros': False, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': Decimal('123.56')})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'numero_parcelas': 3, 'sem_juros': False, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processa_pagamento_adiciona_dados_de_parcelas_sem_juros(self):
@@ -210,7 +209,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'true'}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'numero_parcelas': 3, 'sem_juros': True, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': Decimal('123.56')})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'numero_parcelas': 3, 'sem_juros': True, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processa_pagamento_nao_adiciona_dados_de_parcelas(self):
@@ -218,7 +217,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.pedido.conteudo_json['pagarme'] = {'cartao_parcelas': 1}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa'}, 'transacao_id': 'identificacao-id', 'valor_pago': Decimal('123.56')})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
 
 class PagarMeRegistrandoNotificacao(unittest.TestCase):

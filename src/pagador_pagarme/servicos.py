@@ -73,7 +73,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         if self.resposta.sucesso:
             self.dados_pagamento = {
                 'transacao_id': self.resposta.conteudo['id'],
-                'valor_pago': self.pedido.valor_total,
+                'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
                 'conteudo_json': {
                     'bandeira': self.resposta.conteudo['card_brand'],
                     'aplicacao': self.configuracao.aplicacao
@@ -90,12 +90,12 @@ class EntregaPagamento(servicos.EntregaPagamento):
             while tempo_espera:
                 pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
                 if pedido.situacao_id not in [servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE]:
-                    self.resultado = {'sucesso': True}
+                    self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True}
                     return
                 sleep(1)
                 tempo_espera -= 1
             self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
-            self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing'}
+            self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
         elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
             if not self._verifica_erro_em_conteudo(titulo):
