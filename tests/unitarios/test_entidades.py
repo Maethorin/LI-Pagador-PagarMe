@@ -72,7 +72,7 @@ class PagarMeMontandoMalote(unittest.TestCase):
         )
 
     def test_malote_deve_ter_propriedades(self):
-        entidades.Malote('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'true', 'customer': None, 'card_hash': None, 'free_installments': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
+        entidades.Malote('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'true', 'customer': None, 'card_hash': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
 
     def test_deve_montar_conteudo_sem_parcelas(self):
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
@@ -87,7 +87,7 @@ class PagarMeMontandoMalote(unittest.TestCase):
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
         parametros = {}
         malote.monta_conteudo(self.pedido, parametros, {})
-        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'free_installments': 3, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
+        malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 3, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'credit_card', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
 
     def test_deve_montar_conteudo_com_parcelas_com_juros(self):
         self.pedido.conteudo_json['pagarme']['parcelas'] = 3

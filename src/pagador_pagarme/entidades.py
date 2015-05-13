@@ -27,7 +27,6 @@ class Malote(entidades.Malote):
     def __init__(self, configuracao):
         super(Malote, self).__init__(configuracao)
         self.installments = None
-        self.free_installments = None
         self.payment_method = 'credit_card'
         self.capture = 'true'
         self.amount = None
@@ -43,12 +42,7 @@ class Malote(entidades.Malote):
         self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
         self.card_hash = dados_pagamento['cartao']
         parcelas = dados_pagamento.get('parcelas', 1)
-        if dados_pagamento.get('parcelas_sem_juros', None) == 'true':
-            self.free_installments = parcelas
-            self.remove_atributo_da_serializacao('installments')
-        else:
-            self.installments = parcelas
-            self.remove_atributo_da_serializacao('free_installments')
+        self.installments = parcelas
         url_notificacao = settings.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
         self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         self.customer = Cliente(
