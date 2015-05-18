@@ -38,8 +38,12 @@ class Malote(entidades.Malote):
     def monta_conteudo(self, pedido, parametros_contrato=None, dados=None):
         dados_pagamento = pedido.conteudo_json.get(GATEWAY, {})
         if not dados_pagamento:
-            raise self.DadosInvalidos('O pedido não foi montado corretamente no checkout.')
+            raise self.DadosInvalidos(u'O pedido não foi montado corretamente no checkout.')
         self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
+        if 'cartao' not in dados_pagamento:
+            raise self.DadosInvalidos(u'Os dados do cartão não foram processados corretamente no carrinho')
+        if not dados_pagamento['cartao']:
+            raise self.DadosInvalidos(u'Os dados do cartão não foram processados corretamente no carrinho')
         self.card_hash = dados_pagamento['cartao']
         parcelas = dados_pagamento.get('parcelas', 1)
         self.installments = parcelas
