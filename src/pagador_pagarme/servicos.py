@@ -46,11 +46,13 @@ class EntregaPagamento(servicos.EntregaPagamento):
 
     def _verifica_erro_em_conteudo(self, titulo):
         mensagens = []
+        invalid_parameter = False
         if self.resposta.conteudo:
             erros = self.resposta.conteudo.get('errors', None)
             if erros:
                 for erro in erros:
                     if erro['type'] == 'invalid_parameter':
+                        invalid_parameter = True
                         mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
                     elif erro['type'] == 'action_forbidden' and 'refused' in erro['message']:
                         return False
@@ -60,6 +62,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
                         mensagens.append(erro['message'])
             else:
                 mensagens.append(json.dumps(self.resposta.conteudo))
+        if invalid_parameter:
+            titulo = u'Dados inválidos:\n{}'.format('\n'.join(mensagens))
         mensagens.append(u'HTTP STATUS CODE: {}'.format(self.resposta.status_code))
         raise self.EnvioNaoRealizado(
             titulo,
@@ -102,6 +106,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             if not self._verifica_erro_em_conteudo(titulo):
                 self.resultado = {'sucesso': False, 'mensagem': u'nao_aprovado', 'situacao_pedido': self.situacao_pedido, 'fatal': True}
         else:
+            self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
             self._verifica_erro_em_conteudo(u'Não foi obtida uma resposta válida do PAGAR.ME. Nosso equipe técnica está avaliando o problema.')
 
     @property

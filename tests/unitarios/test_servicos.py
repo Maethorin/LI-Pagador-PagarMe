@@ -118,7 +118,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.resposta = mock.MagicMock(status_code=400, sucesso=False, nao_autorizado=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
         self.entregador.processa_dados_pagamento.when.called_with().should.throw(
             self.entregador.EnvioNaoRealizado,
-            u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
+            u'Dados inv\xe1lidos:\ncard_holder_name: Nome do portador do cartão está faltando\ncard_expiration_date: Data de expiração do cartão está faltando'
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
