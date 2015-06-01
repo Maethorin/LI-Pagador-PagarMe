@@ -29,6 +29,13 @@ class Credenciador(servicos.Credenciador):
         return self.chave_api
 
 
+MENSAGEM_DADOS_INVALIDOS = {
+    'customer[phone][ddd]': u'O DDD do seu número de telefone está faltando ou é inválido.',
+    'customer[phone][number]': u'O seu número de telefone está faltando ou é inválido.',
+    'customer[address][zipcode]': u'O seu CEP está faltando ou é inválido.',
+}
+
+
 class EntregaPagamento(servicos.EntregaPagamento):
     def __init__(self, loja_id, plano_indice=1, dados=None):
         super(EntregaPagamento, self).__init__(loja_id, plano_indice, dados=dados)
@@ -46,6 +53,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
 
     def _verifica_erro_em_conteudo(self, titulo):
         mensagens = []
+        titulo_substituto = []
         invalid_parameter = False
         if self.resposta.conteudo:
             erros = self.resposta.conteudo.get('errors', None)
@@ -54,6 +62,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
                     if erro['type'] == 'invalid_parameter':
                         invalid_parameter = erro['parameter_name'] != 'card_hash'
                         mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
+                        titulo_substituto.append(MENSAGEM_DADOS_INVALIDOS.get(erro['parameter_name'], erro['message']))
                     elif erro['type'] == 'action_forbidden' and 'refused' in erro['message']:
                         return False
                     elif erro['type'] == 'action_forbidden' and 'processing' in erro['message']:
@@ -63,7 +72,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             else:
                 mensagens.append(json.dumps(self.resposta.conteudo))
         if invalid_parameter:
-            titulo = u'Dados inválidos:\n{}'.format('\n'.join(mensagens))
+            titulo = u'\nDados inválidos:\n{}'.format('\n'.join(titulo_substituto))
         mensagens.append(u'HTTP STATUS CODE: {}'.format(self.resposta.status_code))
         raise self.EnvioNaoRealizado(
             titulo,
