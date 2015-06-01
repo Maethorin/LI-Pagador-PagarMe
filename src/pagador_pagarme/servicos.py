@@ -70,7 +70,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.loja_id,
             self.pedido.numero,
             dados_envio=self.dados_enviados,
-            erros=mensagens
+            erros=mensagens,
+            status=(400 if invalid_parameter else 500)
         )
 
     def processa_dados_pagamento(self):
