@@ -52,7 +52,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             if erros:
                 for erro in erros:
                     if erro['type'] == 'invalid_parameter':
-                        invalid_parameter = True
+                        invalid_parameter = erro['parameter_name'] != 'card_hash'
                         mensagens.append(u'{}: {}'.format(erro['parameter_name'], erro['message']))
                     elif erro['type'] == 'action_forbidden' and 'refused' in erro['message']:
                         return False
