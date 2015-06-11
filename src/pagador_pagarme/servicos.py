@@ -36,6 +36,17 @@ MENSAGEM_DADOS_INVALIDOS = {
 }
 
 
+MENSAGENS_RETORNO = {
+    'processing': 'Pagamento sendo processado',
+    'authorized': 'Pagamento autorizado',
+    'paid': 'Pagamento aprovado',
+    'refused': 'Pagamento recusado',
+    'waiting_payment': 'Aguardando pagamento',
+    'pending_refund': 'Pagamento em disputa',
+    'refunded': 'Pagamento retornado'
+}
+
+
 class EntregaPagamento(servicos.EntregaPagamento):
     def __init__(self, loja_id, plano_indice=1, dados=None):
         super(EntregaPagamento, self).__init__(loja_id, plano_indice, dados=dados)
@@ -43,6 +54,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.faz_http = True
         self.conexao = self.obter_conexao()
         self.url = 'https://api.pagar.me/1/transactions'
+        self.dados_pagamento = {}
 
     def define_credenciais(self):
         self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
@@ -55,6 +67,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
         mensagens = []
         titulo_substituto = []
         invalid_parameter = False
+        if 'conteudo_json' not in self.dados_pagamento:
+            self.dados_pagamento['conteudo_json'] = {'mensagem_retorno': []}
         if self.resposta.conteudo:
             erros = self.resposta.conteudo.get('errors', None)
             if erros:
@@ -73,6 +87,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 mensagens.append(json.dumps(self.resposta.conteudo))
         if invalid_parameter:
             titulo = u'\nDados inválidos:\n{}'.format('\n'.join(titulo_substituto))
+        self.dados_pagamento['conteudo_json']['mensagem_retorno'] = mensagens
         mensagens.append(u'HTTP STATUS CODE: {}'.format(self.resposta.status_code))
         raise self.EnvioNaoRealizado(
             titulo,
@@ -90,7 +105,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
                 'conteudo_json': {
                     'bandeira': self.resposta.conteudo['card_brand'],
-                    'aplicacao': self.configuracao.aplicacao
+                    'aplicacao': self.configuracao.aplicacao,
+                    'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.')
                 }
             }
             self.identificacao_pagamento = self.resposta.conteudo['id']
