@@ -68,7 +68,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         titulo_substituto = []
         invalid_parameter = False
         if 'conteudo_json' not in self.dados_pagamento:
-            self.dados_pagamento['conteudo_json'] = {'mensagem_retorno': []}
+            self.dados_pagamento['conteudo_json'] = {'mensagem_retorno': ''}
         if self.resposta.conteudo:
             erros = self.resposta.conteudo.get('errors', None)
             if erros:
@@ -87,8 +87,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 mensagens.append(json.dumps(self.resposta.conteudo))
         if invalid_parameter:
             titulo = u'\nDados inválidos:\n{}'.format('\n'.join(titulo_substituto))
-        self.dados_pagamento['conteudo_json']['mensagem_retorno'] = mensagens
         mensagens.append(u'HTTP STATUS CODE: {}'.format(self.resposta.status_code))
+        self.dados_pagamento['conteudo_json']['mensagem_retorno'] = titulo
         raise self.EnvioNaoRealizado(
             titulo,
             self.loja_id,
@@ -121,6 +121,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
                 if pedido.situacao_id not in [servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE]:
                     self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True}
+                    self.dados_pagamento['conteudo_json']['mensagem_retorno'] = DE_PARA_SITUACOES.get(pedido.situacao_id, '')
                     return
                 sleep(1)
                 tempo_espera -= 1
@@ -155,6 +156,15 @@ class SituacoesDePagamento(servicos.SituacoesDePagamento):
         'pending_refund': servicos.SituacaoPedido.SITUACAO_PAGTO_EM_DISPUTA,
         'refunded': servicos.SituacaoPedido.SITUACAO_PAGTO_DEVOLVIDO
     }
+
+DE_PARA_SITUACOES = {
+    servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE: 'Pagamento sendo processado',
+    servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO: 'Pagamento aprovado',
+    servicos.SituacaoPedido.SITUACAO_PEDIDO_CANCELADO: 'Pagamento recusado',
+    servicos.SituacaoPedido.SITUACAO_AGUARDANDO_PAGTO: 'Aguardando pagamento',
+    servicos.SituacaoPedido.SITUACAO_PAGTO_EM_DISPUTA: 'Pagamento em disputa',
+    servicos.SituacaoPedido.SITUACAO_PAGTO_DEVOLVIDO: 'Pagamento retornado'
+}
 
 
 class RegistraNotificacao(servicos.RegistraResultado):
