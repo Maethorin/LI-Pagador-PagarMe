@@ -60,6 +60,16 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
 
     def envia_pagamento(self, tentativa=1):
+        if self.pedido.situacao_id and self.pedido.situacao_id != servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO:
+            self.resultado = {
+                'sucesso': self.pedido.situacao_id == servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO,
+                'situacao_pedido': self.situacao_pedido,
+                'alterado_por_notificacao': False
+            }
+            next_url = self.dados.get('next_url', None)
+            if next_url:
+                self.resultado['next_url'] = next_url
+            raise self.PedidoJaRealizado(u'Esse pedido já foi realizado e está com status {}'.format(self.pedido.situacao_id))
         self.dados_enviados = self.malote.to_dict()
         self.resposta = self.conexao.post(self.url, self.dados_enviados)
 

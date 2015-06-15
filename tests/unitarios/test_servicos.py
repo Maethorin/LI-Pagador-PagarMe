@@ -45,8 +45,10 @@ class PagarMeEntregaPagamento(unittest.TestCase):
                         'parcelas_sem_juros':  'false',
                         'valor_parcela':  None,
                     }
-                }
+                },
+                situacao_id=servicos.servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO
             )
+            self.entregador.dados = {}
             self.entregador.configuracao = mock.MagicMock(aplicacao='test')
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
