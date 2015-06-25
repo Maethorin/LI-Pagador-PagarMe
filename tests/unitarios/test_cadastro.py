@@ -9,6 +9,11 @@ class FormularioPagarMe(unittest.TestCase):
         super(FormularioPagarMe, self).__init__(*args, **kwargs)
         self.formulario = cadastro.FormularioPagarMe()
 
+    def test_deve_ter_dados_boleto(self):
+        self.formulario.dados_boleto.nome.should.be.equal('json')
+        self.formulario.dados_boleto.ordem.should.be.equal(0)
+        self.formulario.dados_boleto.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.oculto)
+
     def test_deve_ter_ativo(self):
         self.formulario.ativo.nome.should.be.equal('ativo')
         self.formulario.ativo.ordem.should.be.equal(1)
@@ -35,12 +40,6 @@ class FormularioPagarMe(unittest.TestCase):
         self.formulario.chave_criptografia.label.should.be.equal(u'Chave de criptografia')
         self.formulario.chave_criptografia.tamanho_max.should.be.equal(128)
         self.formulario.chave_criptografia.requerido.should.be.truthy
-
-    # def test_deve_ter_juros_valor(self):
-    #     self.formulario.juros_valor.nome.should.be.equal('juros_valor')
-    #     self.formulario.juros_valor.ordem.should.be.equal(6)
-    #     self.formulario.juros_valor.label.should.be.equal(u'Taxa de Juros')
-    #     self.formulario.juros_valor.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.decimal)
 
     def test_deve_ter_valor_minimo_aceitado(self):
         self.formulario.valor_minimo_aceitado.nome.should.be.equal('valor_minimo_aceitado')
