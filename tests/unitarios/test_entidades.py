@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 from decimal import Decimal
+from datetime import datetime
 
 import mock
 
@@ -10,7 +11,7 @@ from pagador_pagarme import entidades
 class PagarMeConfiguracaoMeioPagamento(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(PagarMeConfiguracaoMeioPagamento, self).__init__(*args, **kwargs)
-        self.campos = ['ativo', 'aplicacao', 'usuario', 'token', 'senha', 'usar_antifraude', 'juros_valor', 'valor_minimo_aceitado', 'valor_minimo_parcela', 'mostrar_parcelamento', 'parcelas_sem_juros', 'maximo_parcelas']
+        self.campos = ['ativo', 'aplicacao', 'usuario', 'token', 'senha', 'usar_antifraude', 'juros_valor', 'valor_minimo_aceitado', 'valor_minimo_parcela', 'mostrar_parcelamento', 'parcelas_sem_juros', 'maximo_parcelas', 'json']
         self.codigo_gateway = 12
 
     @mock.patch('pagador_pagarme.entidades.ConfiguracaoMeioPagamento.preencher_gateway', mock.MagicMock())
@@ -62,6 +63,7 @@ class PagarMeMontandoMalote(unittest.TestCase):
             ],
             conteudo_json={
                 'pagarme': {
+                    'metodo': 'cartao',
                     'nome_loja': 'Nome Loja',
                     'cartao':  'cartao-hash',
                     'parcelas':  1,
@@ -71,8 +73,11 @@ class PagarMeMontandoMalote(unittest.TestCase):
             }
         )
 
-    def test_malote_deve_ter_propriedades(self):
-        entidades.Malote('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'true', 'customer': None, 'card_hash': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
+    def test_malote_cartao_deve_ter_propriedades(self):
+        entidades.MaloteCartao('configuracao').to_dict().should.be.equal({'amount': None, 'capture': 'true', 'customer': None, 'card_hash': None, 'installments': None, 'payment_method': 'credit_card', 'metadata': None, 'postback_url': None})
+
+    def test_malote_boleto_deve_ter_propriedades(self):
+        entidades.MaloteBoleto('configuracao').to_dict().should.be.equal({'amount': None, 'boleto_expiration_date': None, 'customer': None, 'metadata': None, 'payment_method': 'boleto', 'postback_url': None})
 
     def test_deve_montar_conteudo_sem_parcelas(self):
         malote = entidades.Malote(mock.MagicMock(loja_id=8))
@@ -104,3 +109,12 @@ class PagarMeMontandoMalote(unittest.TestCase):
         parametros = {}
         malote.monta_conteudo(self.pedido, parametros, {})
         malote.to_dict().should.be.equal({'amount': 1400, 'capture': 'true', 'card_hash': 'cartao-hash', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'installments': 3, 'payment_method': 'credit_card', 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})
+
+    @mock.patch('pagador_pagarme.entidades.datetime')
+    def test_deve_montar_conteudo_de_boleto(self, datetime_mock):
+        datetime_mock.now.return_value = datetime(2015, 6, 12, 15, 30)
+        self.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
+        malote = entidades.Malote(mock.MagicMock(loja_id=8, json={'dias_vencimento': 4}))
+        parametros = {}
+        malote.monta_conteudo(self.pedido, parametros, {})
+        malote.to_dict().should.be.equal({'amount': 1400, 'boleto_expiration_date': '2015-06-16T15:30:00', 'customer': {'address': {'complementary': 'Apt 101', 'neighborhood': 'Teste', 'street': 'Rua Teste', 'street_number': 123, 'zipcode': '10234000'}, 'document_number': '12345678901', 'email': 'email@cliente.com', 'name': 'Cliente Teste', 'phone': {'ddd': '11', 'number': '23456789'}}, 'metadata': {'carrinho': [{'nome': 'Produto 1', 'preco_venda': 40.0, 'quantidade': 1, 'sku': 'PROD01'}, {'nome': 'Produto 2', 'preco_venda': 50.0, 'quantidade': 1, 'sku': 'PROD02'}], 'pedido_numero': 123}, 'payment_method': 'boleto', 'postback_url': 'http://localhost:5000/pagador/meio-pagamento/pagarme/retorno/8/notificacao?referencia=123'})

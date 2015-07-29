@@ -39,6 +39,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
                 numero=1234,
                 conteudo_json={
                     'pagarme': {
+                        'metodo': 'cartao',
                         'nome_loja': 'Nome Loja',
                         'cartao':  'cartao-hash',
                         'parcelas':  1,
@@ -175,7 +176,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.conexao.post.assert_called_with('url-envio', 'malote')
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
-    def test_processa_pagamento_adiciona_dados_de_parcelas_com_juros(self):
+    def test_processa_pagamento_cartao_adiciona_dados_de_parcelas_com_juros(self):
         self.entregador.configuracao = mock.MagicMock(aplicacao='test')
         self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'false'}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
@@ -183,7 +184,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'sem_juros': False, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
-    def test_processa_pagamento_adiciona_dados_de_parcelas_sem_juros(self):
+    def test_processa_pagamento_cartao_adiciona_dados_de_parcelas_sem_juros(self):
         self.entregador.configuracao = mock.MagicMock(aplicacao='test')
         self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'true'}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
@@ -191,12 +192,26 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'sem_juros': True, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
-    def test_processa_pagamento_nao_adiciona_dados_de_parcelas(self):
+    def test_processa_pagamento_cartao_nao_adiciona_dados_de_parcelas(self):
         self.entregador.configuracao = mock.MagicMock(aplicacao='test')
         self.entregador.pedido.conteudo_json['pagarme'] = {'cartao_parcelas': 1}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
         self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
+
+    def test_processa_pagamento_boleto(self):
+        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
+        self.entregador.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
+        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'waiting_payment', 'id': 'identificacao-id', 'boleto_url': 'url-boleto', 'boleto_barcode': 'codigo-barras-boleto', 'boleto_expiration_date': 'data-expiracao-boleto'})
+        self.entregador.processa_dados_pagamento()
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'boleto_url': 'url-boleto', 'codigo_barras': 'codigo-barras-boleto', 'vencimento': 'data-expiracao-boleto'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
+
+    def test_processa_pagamento_boleto_sem_sucesso(self):
+        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
+        self.entregador.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
+        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'refused'})
+        self.entregador.processa_dados_pagamento()
+        self.entregador.dados_pagamento.should.be.empty
 
 
 class PagarMeRegistrandoNotificacao(unittest.TestCase):
