@@ -4,8 +4,7 @@ from li_common.padroes import cadastro
 
 
 class FormularioPagarMe(cadastro.Formulario):
-    _PARCELAS = [(x, x) for x in range(1, 12)]
-    _PARCELAS.insert(0, (12, 'Todas'))
+    _PARCELAS = [(x, x) for x in range(1, 13)]
     ativo = cadastro.CampoFormulario('ativo', 'Pagamento ativo?', tipo=cadastro.TipoDeCampo.boleano, ordem=1)
     ambiente = cadastro.CampoFormulario('aplicacao', u'Ambiente', tipo=cadastro.TipoDeCampo.escolha, requerido=True, opcoes=(('T', u'test'), ('L', u'live')), ordem=2, texto_ajuda=u'Use test para validar sua integração com o PAGAR.ME. Ao alterar essa opção para live, você também deve alterar sua conta no PAGAR.ME para live.')
     chave_api = cadastro.CampoFormulario('token', u'Chave de API', requerido=True, tamanho_max=128, ordem=3, texto_ajuda=u'Copie a chave do seu dashboard Pagar.me e cole aqui')
