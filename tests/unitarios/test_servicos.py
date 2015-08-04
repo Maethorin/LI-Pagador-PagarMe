@@ -95,6 +95,22 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.conexao.post.assert_called_with(self.entregador.url, 'malote-como-dicionario')
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_enviar_pagamento_dispara_erro_pedido_ja_realizado_e_cancelado(self):
+        entregador = servicos.EntregaPagamento(8, dados={})
+        entregador.pedido = mock.MagicMock(numero=1234, situacao_id=8)
+        entregador.envia_pagamento.when.called_with().should.throw(
+            entregador.PedidoJaRealizado, u'Já foi realizado um pedido com o número 1234 e ele está como Pedido Cancelado.\nSeu pedido foi cancelado e não pode ser mais usado. Você precisa fazer um novo pedido na loja.'
+        )
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    def test_enviar_pagamento_dispara_erro_pedido_ja_realizado_e_pago(self):
+        entregador = servicos.EntregaPagamento(8, dados={})
+        entregador.pedido = mock.MagicMock(numero=1234, situacao_id=4)
+        entregador.envia_pagamento.when.called_with().should.throw(
+            entregador.PedidoJaRealizado, u'Já foi realizado um pedido com o número 1234 e ele está como Pedido Pago.\nSeu pagamento já está pago e estamos processando o envio'
+        )
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     def test_pre_envio_nao_tem_parcelas_sem_cartao_parcelas_em_dados(self):
         self.entregador.tem_parcelas.should.be.falsy
 
