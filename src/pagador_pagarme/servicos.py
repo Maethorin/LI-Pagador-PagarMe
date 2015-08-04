@@ -53,6 +53,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.tem_malote = True
         self.faz_http = True
         self.conexao = self.obter_conexao()
+        self.conexao.tenta_outra_vez = False
         self.url = 'https://api.pagar.me/1/transactions'
         self.dados_pagamento = {}
 
