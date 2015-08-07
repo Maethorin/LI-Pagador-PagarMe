@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from decimal import Decimal
+import json
 import unittest
 import mock
 from pagador_pagarme import servicos
@@ -44,7 +45,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
                         'cartao':  'cartao-hash',
                         'parcelas':  1,
                         'parcelas_sem_juros':  'false',
-                        'valor_parcela':  None,
+                        'valor_parcela':  123.56,
                     }
                 },
                 situacao_id=servicos.servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO
@@ -129,9 +130,10 @@ class PagarMeEntregaPagamento(unittest.TestCase):
     def test_processar_dados_de_pagamento_define_dados_pagamento(self):
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'processing', 'id': 'identificacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento sendo processado'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'metodo': 'cartao', 'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento sendo processado', 'numero_parcelas': 1, 'valor_parcela': 123.56}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processar_dados_de_pagamento_dispara_erro_se_invalido(self):
         self.entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         self.entregador.resposta = mock.MagicMock(status_code=400, sucesso=False, nao_autorizado=False, requisicao_invalida=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_holder_name'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'invalid_parameter', u'parameter_name': u'card_expiration_date'}], u'method': u'post'})
@@ -141,6 +143,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processar_dados_de_pagamento_dispara_erro_sem_ser_parameter(self):
         self.entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         self.entregador.pedido = mock.MagicMock(numero=1234)
@@ -151,6 +154,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
     def test_processar_dados_de_pagamento_dispara_erro_de_autorizacao(self):
         self.entregador.dados_enviados = {'card_hash': None, 'capture': 'false', 'amount': 2900, 'installments': 1, 'payment_method': 'credit_card'}
         self.entregador.resposta = mock.MagicMock(status_code=403, sucesso=False, requisicao_invalida=False, nao_autorizado=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'api_key inválida', u'type': u'whatever'}], u'method': u'post'})
@@ -197,30 +201,14 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'false'}
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'sem_juros': False, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
-
-    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
-    def test_processa_pagamento_cartao_adiciona_dados_de_parcelas_sem_juros(self):
-        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
-        self.entregador.pedido.conteudo_json['pagarme'] = {'parcelas': 3, 'valor_parcela': '15.68', 'parcelas_sem_juros': 'true'}
-        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
-        self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'sem_juros': True, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
-
-    @mock.patch('pagador_pagarme.servicos.TEMPO_MAXIMO_ESPERA_NOTIFICACAO', 0)
-    def test_processa_pagamento_cartao_nao_adiciona_dados_de_parcelas(self):
-        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
-        self.entregador.pedido.conteudo_json['pagarme'] = {'cartao_parcelas': 1}
-        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'authorized', 'id': 'identificacao-id', 'tid': 'transacao-id', 'card_brand': 'visa'})
-        self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'metodo': 'cartao', 'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     def test_processa_pagamento_boleto(self):
         self.entregador.configuracao = mock.MagicMock(aplicacao='test')
         self.entregador.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
         self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'waiting_payment', 'id': 'identificacao-id', 'boleto_url': 'url-boleto', 'boleto_barcode': 'codigo-barras-boleto', 'boleto_expiration_date': 'data-expiracao-boleto'})
         self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'test', 'boleto_url': 'url-boleto', 'codigo_barras': 'codigo-barras-boleto', 'vencimento': 'data-expiracao-boleto'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
+        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'metodo': 'boleto', 'aplicacao': 'test', 'boleto_url': 'url-boleto', 'codigo_barras': 'codigo-barras-boleto', 'vencimento': 'data-expiracao-boleto'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
     def test_processa_pagamento_boleto_sem_sucesso(self):
         self.entregador.configuracao = mock.MagicMock(aplicacao='test')
@@ -264,3 +252,50 @@ class PagarMeRegistrandoNotificacao(unittest.TestCase):
         registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
         registrador.monta_dados_pagamento()
         registrador.resultado.should.be.equal({'resultado': 'OK'})
+
+    @mock.patch('pagador_pagarme.servicos.RegistraNotificacao.parcela')
+    def test_deve_montar_dados_pagamento_cartao_fazendo_request(self, parcela_mock):
+        parcela_mock.return_value = {'valor_parcelado': 97.47}
+        resposta = json.loads("""{"status": "paid","amount": 29242,"installments": 3,"id": 1014652,"card_brand": "visa","payment_method": "credit_card","boleto_url": null,"boleto_barcode": null,"boleto_expiration_date": null}""")
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1014652, 'current_status': 'paid'})
+        registrador.configuracao = mock.MagicMock(aplicacao='L')
+        registrador.resposta = mock.MagicMock(sucesso=True, conteudo=resposta)
+        registrador.monta_dados_pagamento()
+        registrador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'L', 'bandeira': u'visa', 'mensagem_retorno': 'Pagamento aprovado', 'metodo': 'cartao', 'numero_parcelas': 3, 'valor_parcela': 97.47}, 'transacao_id': 1014652, 'valor_pago': '292.42'})
+        registrador.resultado.should.be.equal({'resultado': 'OK'})
+
+    def test_deve_montar_dados_pagamento_boleto_fazendo_request(self):
+        resposta = json.loads("""{"status": "paid","amount": 29242,"installments": 1,"id": 1014652,"payment_method": "boleto",  "boleto_url": "https://api.pagar.me/1/boletos/live_cid1vq9t00000ds3c1nyqg9j5","boleto_barcode": "23791.22928 50000.023221 77000.046902 1 65150000015432","boleto_expiration_date": "2015-08-09T03:00:00.299Z"}""")
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1014652, 'current_status': 'paid'})
+        registrador.configuracao = mock.MagicMock(aplicacao='L')
+        registrador.resposta = mock.MagicMock(sucesso=True, conteudo=resposta)
+        registrador.monta_dados_pagamento()
+        registrador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'L', 'boleto_url': u'https://api.pagar.me/1/boletos/live_cid1vq9t00000ds3c1nyqg9j5', 'codigo_barras': u'23791.22928 50000.023221 77000.046902 1 65150000015432', 'metodo': 'boleto', 'vencimento': u'2015-08-09T03:00:00.299Z'}, 'transacao_id': 1014652, 'valor_pago': '292.42'})
+        registrador.resultado.should.be.equal({'resultado': 'OK'})
+
+    def test_deve_consultar_dados_de_parcela(self):
+        registrador = servicos.RegistraNotificacao(1234, {'id': 1014652, 'current_status': 'paid'})
+        registrador.configuracao = mock.MagicMock(parcelas_disponiveis=[
+            {
+                'valor_parcelado': 100.0,
+                'numero': 1,
+                'sem_juros': True
+            },
+            {
+                'valor_parcelado': 50.0,
+                'numero': 2,
+                'sem_juros': True
+            },
+            {
+                'valor_parcelado': 33.0,
+                'numero': 3,
+                'sem_juros': True
+            },
+            {
+                'valor_parcelado': 25.0,
+                'numero': 4,
+                'sem_juros': True
+            },
+        ])
+        registrador.parcela(3, 100).should.be.equal({'numero': 3, 'sem_juros': True, 'valor_parcelado': 33.0})
+        registrador.configuracao.adiciona_parcelas_disponiveis.assert_called_with(100)

@@ -116,11 +116,12 @@ class EntregaPagamento(servicos.EntregaPagamento):
         )
 
     def processa_dados_pagamento(self):
+        if self.pedido.conteudo_json['pagarme'].get('metodo', '') == 'boleto':
+            self.processa_dados_pagamento_boleto()
+        else:
+            self.processa_dados_pagamento_cartao()
         if self.resposta.sucesso:
-            if self.pedido.conteudo_json['pagarme'].get('metodo', '') == 'boleto':
-                self.processa_dados_pagamento_boleto()
-            else:
-                self.processa_dados_pagamento_cartao()
+            return
         elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
             titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
@@ -131,39 +132,25 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self._verifica_erro_em_conteudo(u'Não foi obtida uma resposta válida do PAGAR.ME. Nosso equipe técnica está avaliando o problema.')
 
     def processa_dados_pagamento_boleto(self):
-        sucesso = self.resposta.conteudo['status'] == 'waiting_payment'
-        if sucesso:
-            self.dados_pagamento = {
-                'transacao_id': self.resposta.conteudo['id'],
-                'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
-                'conteudo_json': {
-                    'aplicacao': self.configuracao.aplicacao,
-                    'boleto_url': self.resposta.conteudo['boleto_url'],
-                    'codigo_barras': self.resposta.conteudo['boleto_barcode'],
-                    'vencimento': self.resposta.conteudo['boleto_expiration_date'],
+        if self.resposta.sucesso:
+            sucesso = self.resposta.conteudo['status'] == 'waiting_payment'
+            if sucesso:
+                self.dados_pagamento = {
+                    'transacao_id': self.resposta.conteudo['id'],
+                    'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
+                    'conteudo_json': {
+                        'metodo': 'boleto',
+                        'aplicacao': self.configuracao.aplicacao,
+                        'boleto_url': self.resposta.conteudo['boleto_url'],
+                        'codigo_barras': self.resposta.conteudo['boleto_barcode'],
+                        'vencimento': self.resposta.conteudo['boleto_expiration_date'],
+                    }
                 }
-            }
-            self.identificacao_pagamento = self.resposta.conteudo['id']
-        self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
-        self.resultado = {'sucesso': sucesso, 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
+                self.identificacao_pagamento = self.resposta.conteudo['id']
+            self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
+            self.resultado = {'sucesso': sucesso, 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
 
     def processa_dados_pagamento_cartao(self):
-        self.dados_pagamento = {
-            'transacao_id': self.resposta.conteudo['id'],
-            'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
-            'conteudo_json': {
-                'bandeira': self.resposta.conteudo['card_brand'],
-                'aplicacao': self.configuracao.aplicacao,
-                'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.')
-            }
-        }
-        self.identificacao_pagamento = self.resposta.conteudo['id']
-        if self.tem_parcelas and self.dados_cartao:
-            self.dados_pagamento['conteudo_json'].update({
-                'numero_parcelas': int(self.dados_cartao.get('parcelas', 1)),
-                'valor_parcela': float(self.dados_cartao.get('valor_parcela', '0.0')),
-                'sem_juros': self.dados_cartao.get('parcelas_sem_juros', '') == 'true'
-            })
         tempo_espera = TEMPO_MAXIMO_ESPERA_NOTIFICACAO
         while tempo_espera:
             pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
@@ -173,8 +160,22 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 return
             sleep(1)
             tempo_espera -= 1
-        self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
-        self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
+        if self.resposta.sucesso:
+            self.dados_pagamento = {
+                'transacao_id': self.resposta.conteudo['id'],
+                'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
+                'conteudo_json': {
+                    'metodo': 'cartao',
+                    'bandeira': self.resposta.conteudo['card_brand'],
+                    'aplicacao': self.configuracao.aplicacao,
+                    'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.'),
+                    'numero_parcelas': int(self.dados_cartao.get('parcelas', 1)),
+                    'valor_parcela': float(self.dados_cartao.get('valor_parcela', '0.0')),
+                }
+            }
+            self.identificacao_pagamento = self.resposta.conteudo['id']
+            self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
+            self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
 
     @property
     def dados_cartao(self):
@@ -210,6 +211,17 @@ DE_PARA_SITUACOES = {
 class RegistraNotificacao(servicos.RegistraResultado):
     def __init__(self, loja_id, dados=None):
         super(RegistraNotificacao, self).__init__(loja_id, dados)
+        self.faz_http = True
+        self.conexao = self.obter_conexao()
+        self.url = 'https://api.pagar.me/1/transactions/{}'
+        self.dados_pagamento = {}
+
+    def define_credenciais(self):
+        self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
+
+    def obtem_informacoes_pagamento(self):
+        if 'id' in self.dados:
+            self.resposta = self.conexao.get(self.url.format(self.dados['id']))
 
     @property
     def transacao_id(self):
@@ -223,7 +235,42 @@ class RegistraNotificacao(servicos.RegistraResultado):
     def status(self):
         return self.dados.get('current_status', None)
 
+    def parcela(self, numero, valor_pago):
+        self.configuracao.adiciona_parcelas_disponiveis(valor_pago)
+        for parcela in self.configuracao.parcelas_disponiveis:
+            if int(parcela['numero']) == int(numero):
+                return parcela
+        return {'valor_parcelado': 0.0}
+
     def monta_dados_pagamento(self):
         self.pedido_numero = self.pedido_id
         self.situacao_pedido = SituacoesDePagamento.do_tipo(self.status)
+        if self.resposta and self.resposta.sucesso:
+            valor_pago = self.formatador.formata_decimal(float(self.resposta.conteudo['amount']) / 100)
+            if self.resposta.conteudo['payment_method'] == 'credit_card':
+                numero_parcela = int(self.resposta.conteudo.get('installments', 1))
+                self.dados_pagamento = {
+                    'transacao_id': self.dados['id'],
+                    'valor_pago': valor_pago,
+                    'conteudo_json': {
+                        'metodo': 'cartao',
+                        'bandeira': self.resposta.conteudo['card_brand'],
+                        'aplicacao': self.configuracao.aplicacao,
+                        'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.'),
+                        'numero_parcelas': numero_parcela,
+                        'valor_parcela': self.parcela(numero_parcela, valor_pago)['valor_parcelado'],
+                    }
+                }
+            else:
+                self.dados_pagamento = {
+                    'transacao_id': self.dados['id'],
+                    'valor_pago': valor_pago,
+                    'conteudo_json': {
+                        'metodo': 'boleto',
+                        'aplicacao': self.configuracao.aplicacao,
+                        'boleto_url': self.resposta.conteudo['boleto_url'],
+                        'codigo_barras': self.resposta.conteudo['boleto_barcode'],
+                        'vencimento': self.resposta.conteudo['boleto_expiration_date'],
+                    }
+                }
         self.resultado = {'resultado': 'OK'}

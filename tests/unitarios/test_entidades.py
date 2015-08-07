@@ -33,9 +33,14 @@ class PagarMeConfiguracaoMeioPagamento(unittest.TestCase):
         configuracao.formulario.should.be.a('pagador_pagarme.cadastro.FormularioPagarMe')
 
     @mock.patch('pagador_pagarme.entidades.ConfiguracaoMeioPagamento.preencher_gateway', mock.MagicMock())
-    def test_deve_ser_aplicacao(self):
+    def test_nao_deve_ser_aplicacao(self):
         configuracao = entidades.ConfiguracaoMeioPagamento(234)
         configuracao.eh_aplicacao.should.be.falsy
+
+    @mock.patch('pagador_pagarme.entidades.ConfiguracaoMeioPagamento.preencher_gateway', mock.MagicMock())
+    def test_deve_exigir_https(self):
+        configuracao = entidades.ConfiguracaoMeioPagamento(234)
+        configuracao.exige_https.should.be.truthy
 
 
 class PagarMeMontandoMalote(unittest.TestCase):

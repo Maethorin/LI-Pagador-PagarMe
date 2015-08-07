@@ -132,7 +132,7 @@ class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
         self.codigo_gateway = CODIGO_GATEWAY
         self.eh_gateway = True
         super(ConfiguracaoMeioPagamento, self).__init__(loja_id, codigo_pagamento, eh_listagem=eh_listagem)
-        # self.exige_https = True
+        self.exige_https = True
         self.url_card_hash = 'https://pagar.me/assets/pagarme-v2.min.js'
         if not self.eh_listagem:
             if not self.json:
