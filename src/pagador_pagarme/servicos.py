@@ -155,8 +155,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
         while tempo_espera:
             pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
             if pedido.situacao_id not in [servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE]:
+                self.situacao_pedido = None
                 self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True}
-                self.dados_pagamento['conteudo_json']['mensagem_retorno'] = DE_PARA_SITUACOES.get(pedido.situacao_id, '')
                 return
             sleep(1)
             tempo_espera -= 1
