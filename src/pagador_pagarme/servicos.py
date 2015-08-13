@@ -274,3 +274,26 @@ class RegistraNotificacao(servicos.RegistraResultado):
                     }
                 }
         self.resultado = {'resultado': 'OK'}
+
+
+class ValidaLoja(servicos.ServicoBase):
+    resposta = None
+
+    @classmethod
+    def inicia_conexao(cls, configuracao):
+        if not cls.resposta:
+            conexao = servicos.requisicao.Conexao()
+            conexao.credenciador = Credenciador(configuracao=configuracao)
+            cls.resposta = conexao.get('https://api.pagar.me/1/company')
+
+    @classmethod
+    def eh_live(cls):
+        if cls.resposta and cls.resposta.sucesso:
+            return cls.resposta.conteudo['status'] == 'active'
+        return False
+
+    @classmethod
+    def eh_teste(cls):
+        if cls.resposta and cls.resposta.sucesso:
+            return cls.resposta.conteudo['status'] != 'active'
+        return False

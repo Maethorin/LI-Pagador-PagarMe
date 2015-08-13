@@ -46,6 +46,7 @@ class Malote(entidades.Malote):
     def to_dict(self):
         return self._malote_especifico.to_dict()
 
+
 class MaloteCartao(entidades.Malote):
     def __init__(self, configuracao):
         super(MaloteCartao, self).__init__(configuracao)
@@ -138,3 +139,14 @@ class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
             if not self.json:
                 self.json = JSON_PADRAO
             self.formulario = cadastro.FormularioPagarMe()
+
+    @property
+    def em_uso_na_loja(self):
+        em_uso = super(ConfiguracaoMeioPagamento, self).em_uso_na_loja
+        validador = self.cria_servico_extensao('ValidaLoja')
+        validador.inicia_conexao(self)
+        if self.aplicacao == 'L':
+            return em_uso and validador.eh_live()
+        else:
+            return em_uso and validador.eh_teste()
+

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
+import mock
 
 from pagador_pagarme import cadastro
 
@@ -67,3 +68,46 @@ class FormularioPagarMe(unittest.TestCase):
 
     def test_deve_ter_quantidade_certa_parcelas(self):
         self.formulario._PARCELAS.should.be.equal([(1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9), (10, 10), (11, 11), (12, 12)])
+
+
+class ValidarAmbiente(unittest.TestCase):
+    @mock.patch('pagador_pagarme.cadastro.requisicao.Conexao')
+    def test_nao_deve_validar_live_com_test_no_pagarme(self, conexao_mock):
+        conexao_mock.return_value.get.return_value = mock.MagicMock(sucesso=True, conteudo={'status': 'nao'})
+        validador = cadastro.AmbienteValidador(valor='L', valores={'token': 'zas'})
+        validador.eh_valido.should.be.falsy
+        validador.erros.should.be.equal(u'Sua loja não está live no Pagar.Me. Altere primeiro no Dashboard do Pagar.Me antes de atualizar na Loja Integrada.')
+        conexao_mock.assert_called_with(formato_envio='text/html')
+        conexao_mock.return_value.get.assert_called_with('https://api.pagar.me/1/company', dados={'api_key': 'zas'})
+
+    @mock.patch('pagador_pagarme.cadastro.requisicao.Conexao')
+    def test_deve_validar_live_com_live_no_pagarme(self, conexao_mock):
+        conexao_mock.return_value.get.return_value = mock.MagicMock(sucesso=True, conteudo={'status': 'active'})
+        validador = cadastro.AmbienteValidador(valor='L', valores={'token': 'zas'})
+        validador.eh_valido.should.be.truthy
+        validador.erros.should.be.empty
+
+
+class ValidarChaveApi(unittest.TestCase):
+    @mock.patch('pagador_pagarme.cadastro.requisicao.Conexao')
+    def test_nao_deve_validar_live_com_erro_no_pagarme(self, conexao_mock):
+        conexao_mock.return_value.get.return_value = mock.MagicMock(sucesso=False)
+        validador = cadastro.ChaveApiValidador(valor='zas', valores={})
+        validador.eh_valido.should.be.falsy
+        validador.erros.should.be.equal(u'A Chave de Api digitada não é válida. Se você está tentando usar a chave de api LIVE, altere sua loja para LIVE primeiro no Pagar.Me.')
+        conexao_mock.assert_called_with(formato_envio='text/html')
+        conexao_mock.return_value.get.assert_called_with('https://api.pagar.me/1/company', dados={'api_key': 'zas'})
+
+    @mock.patch('pagador_pagarme.cadastro.requisicao.Conexao')
+    def test_nao_deve_validar_live_com_teste_no_pagarme(self, conexao_mock):
+        conexao_mock.return_value.get.return_value = mock.MagicMock(sucesso=True, conteudo={'status': 'nao'})
+        validador = cadastro.ChaveApiValidador(valor='ak_live_zas', valores={})
+        validador.eh_valido.should.be.falsy
+        validador.erros.should.be.equal(u'Sua loja não está live no Pagar.Me. Altere primeiro no Dashboard do Pagar.Me antes de usar a chave de api live.')
+
+    @mock.patch('pagador_pagarme.cadastro.requisicao.Conexao')
+    def test_deve_validar_live_com_live_no_pagarme(self, conexao_mock):
+        conexao_mock.return_value.get.return_value = mock.MagicMock(sucesso=True, conteudo={'status': 'active'})
+        validador = cadastro.ChaveApiValidador(valor='ak_live_zas', valores={})
+        validador.eh_valido.should.be.truthy
+        validador.erros.should.be.empty
