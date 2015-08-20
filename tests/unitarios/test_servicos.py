@@ -248,10 +248,10 @@ class PagarMeRegistrandoNotificacao(unittest.TestCase):
         registrador.monta_dados_pagamento()
         registrador.situacao_pedido.should.be.none
 
-    def test_deve_retornar_resultado_ok(self):
+    def test_deve_retornar_resultado_falha(self):
         registrador = servicos.RegistraNotificacao(1234, {'id': 1234, 'current_status': 'paid'})
         registrador.monta_dados_pagamento()
-        registrador.resultado.should.be.equal({'resultado': 'OK'})
+        registrador.resultado.should.be.equal({'resultado': 'FALHA', 'status_code': 500})
 
     @mock.patch('pagador_pagarme.servicos.RegistraNotificacao.parcela')
     def test_deve_montar_dados_pagamento_cartao_fazendo_request(self, parcela_mock):

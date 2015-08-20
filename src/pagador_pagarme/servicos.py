@@ -225,7 +225,8 @@ class RegistraNotificacao(servicos.RegistraResultado):
 
     def obtem_informacoes_pagamento(self):
         if 'id' in self.dados:
-            self.resposta = self.conexao.get(self.url.format(self.dados['id']))
+            self.url = self.url.format(self.dados['id'])
+            self.resposta = self.conexao.get(self.url)
 
     @property
     def transacao_id(self):
@@ -277,4 +278,6 @@ class RegistraNotificacao(servicos.RegistraResultado):
                         'vencimento': self.resposta.conteudo['boleto_expiration_date'],
                     }
                 }
-        self.resultado = {'resultado': 'OK'}
+            self.resultado = {'resultado': 'OK'}
+        else:
+            self.resultado = {'resultado': 'FALHA', 'status_code': 500}
