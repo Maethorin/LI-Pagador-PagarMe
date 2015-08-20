@@ -117,12 +117,12 @@ class EntregaPagamento(servicos.EntregaPagamento):
 
     def processa_dados_pagamento(self):
         if self.pedido.conteudo_json['pagarme'].get('metodo', '') == 'boleto':
-            self.processa_dados_pagamento_boleto()
+            processado = self.processa_dados_pagamento_boleto()
         else:
-            self.processa_dados_pagamento_cartao()
-        if self.resposta.sucesso:
+            processado = self.processa_dados_pagamento_cartao()
+        if processado:
             return
-        elif self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
+        if self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
             titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
             if not self._verifica_erro_em_conteudo(titulo):
@@ -149,6 +149,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 self.identificacao_pagamento = self.resposta.conteudo['id']
             self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
             self.resultado = {'sucesso': sucesso, 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
+            return True
+        return False
 
     def processa_dados_pagamento_cartao(self):
         tempo_espera = TEMPO_MAXIMO_ESPERA_NOTIFICACAO
@@ -157,7 +159,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             if pedido.situacao_id not in [servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE]:
                 self.situacao_pedido = None
                 self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True}
-                return
+                return True
             sleep(1)
             tempo_espera -= 1
         if self.resposta.sucesso:
@@ -176,6 +178,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
             self.identificacao_pagamento = self.resposta.conteudo['id']
             self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
             self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
+            return True
+        return False
 
     @property
     def dados_cartao(self):
