@@ -29,6 +29,23 @@ class PagarMeSituacoesPagamento(unittest.TestCase):
         servicos.SituacoesDePagamento.do_tipo('zas').should.be.none
 
 
+class RedisMock(object):
+    def __init__(self):
+        self.registros = {}
+        self.server = mock.MagicMock()
+
+    def exists(self, key):
+        if key == '8-pagarme-666':
+            return True
+        return key in self.registros
+
+    def set(self, key, value):
+        self.registros[key] = value
+
+    def get(self, key):
+        return self.registros[key]
+
+
 class PagarMeEntregaPagamento(unittest.TestCase):
     def setUp(self):
         self.conexao_mock = mock.MagicMock()
@@ -78,6 +95,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         credenciador_mock.assert_called_with(configuracao='configuracao')
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_deve_enviar_pagamento(self):
         self.entregador.malote = mock.MagicMock()
         self.entregador.malote.to_dict.return_value = 'malote-como-dicionario'
@@ -88,6 +106,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.resposta.should.be.equal('resposta')
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_deve_usar_post_ao_enviar_pagamento(self):
         self.entregador.malote = mock.MagicMock()
         self.entregador.malote.to_dict.return_value = 'malote-como-dicionario'
@@ -96,6 +115,30 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.conexao.post.assert_called_with(self.entregador.url, 'malote-como-dicionario')
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
+    def test_deve_validar_pelo_cache_e_nao_enviar(self):
+        self.entregador.malote = mock.MagicMock()
+        self.entregador.malote.to_dict.return_value = 'malote-como-dicionario'
+        self.entregador.conexao = mock.MagicMock()
+        self.entregador.envia_pagamento()
+        self.entregador.envia_pagamento()
+        self.entregador.conexao.post.assert_called_with(self.entregador.url, 'malote-como-dicionario')
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.cacheador_estah_no_ar')
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect')
+    def test_deve_definir_cache_ao_enviar_pagamento(self, cache_mock, cache_validador):
+        self.entregador.cacheador = mock.MagicMock()
+        self.entregador.cacheador.exists.return_value = False
+        cache_validador.return_value = True
+        self.entregador.malote = mock.MagicMock()
+        self.entregador.malote.to_dict.return_value = 'malote-como-dicionario'
+        self.entregador.conexao = mock.MagicMock()
+        self.entregador.envia_pagamento()
+        self.entregador.cacheador.set.assert_called_with('8-pagarme-1234', 1)
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_enviar_pagamento_dispara_erro_pedido_ja_realizado_e_cancelado(self):
         entregador = servicos.EntregaPagamento(8, dados={})
         entregador.pedido = mock.MagicMock(numero=1234, situacao_id=8)
@@ -104,7 +147,18 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_enviar_pagamento_dispara_erro_pedido_ja_realizado_e_pago(self):
+        entregador = servicos.EntregaPagamento(8, dados={})
+        entregador.pedido = mock.MagicMock(numero=666, situacao_id=4)
+        entregador.envia_pagamento.when.called_with().should.throw(
+            entregador.PedidoJaRealizado, u'Esse pedido está em processamento, porém um erro fez com que o resultado não fosse recebido.\nPor favor, verifique na área do cliente em Meus pedidos a situação dessa compra.'
+        )
+        entregador.resultado.should.be.equal({'alterado_por_notificacao': False, 'situacao_pedido': 4, 'sucesso': True})
+
+    @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
+    def test_enviar_pagamento_dispara_erro_pedido_ja_realizado_se_esta_no_cache(self):
         entregador = servicos.EntregaPagamento(8, dados={})
         entregador.pedido = mock.MagicMock(numero=1234, situacao_id=4)
         entregador.envia_pagamento.when.called_with().should.throw(
@@ -172,6 +226,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.processa_dados_pagamento()
         self.entregador.identificacao_pagamento.should.be.equal('identificacao-id')
 
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_envia_post_define_dados_da_entrega(self):
         self.entregador.conexao = mock.MagicMock()
         self.entregador.malote = mock.MagicMock()
@@ -179,6 +234,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.envia_pagamento()
         self.entregador.dados_enviados.should.be.equal('malote')
 
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_envia_post_define_resposta_da_entrega(self):
         self.entregador.conexao = mock.MagicMock()
         self.entregador.conexao.post.return_value = 'resposta'
@@ -187,6 +243,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.envia_pagamento()
         self.entregador.resposta.should.be.equal('resposta')
 
+    @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)
     def test_envia_post_chama_post_de_conexao(self):
         self.entregador.conexao = mock.MagicMock()
         self.entregador.url = 'url-envio'

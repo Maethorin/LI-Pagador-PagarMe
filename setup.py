@@ -33,7 +33,7 @@ def read(fname):
 
 setup(
     name='li-pagador-pagarme',
-    version='1.0.9',
+    version='1.0.10',
     url='https://github.com/lojaintegrada/LI-Pagador-PagarMe',
     license='MIT',
     description='Meio de pagamento usando o PAGAR-ME (https://pagar.me/)',

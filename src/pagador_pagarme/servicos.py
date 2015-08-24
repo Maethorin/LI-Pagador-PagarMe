@@ -2,6 +2,7 @@
 
 import json
 from time import sleep
+from li_common.conexoes import cache
 from pagador import servicos
 
 
@@ -56,29 +57,51 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.conexao.tenta_outra_vez = False
         self.url = 'https://api.pagar.me/1/transactions'
         self.dados_pagamento = {}
+        self.cacheador = None
 
     def define_credenciais(self):
         self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
 
+    def cacheador_estah_no_ar(self):
+        try:
+            self.cacheador = cache.RedisConnect()
+            self.cacheador.set('PAGARME-PING', 1)
+            funcionando = self.cacheador.get('PAGARME-PING') == 1
+            self.cacheador.server.delete('PAGARME-PING')
+            return funcionando
+        except Exception:
+            return False
+
     def envia_pagamento(self, tentativa=1):
+        if self.cacheador_estah_no_ar():
+            chave = '{}-pagarme-{}'.format(self.loja_id, self.pedido.numero)
+            if self.cacheador.exists(chave):
+                self.dispara_pedido_jah_realizado(em_processamento=True)
+            self.cacheador.set(chave, 1)
         if self.pedido.situacao_id and self.pedido.situacao_id != servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO:
-            self.resultado = {
-                'sucesso': self.pedido.situacao_id == servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO,
-                'situacao_pedido': self.situacao_pedido,
-                'alterado_por_notificacao': False
-            }
-            next_url = self.dados.get('next_url', None)
-            if next_url:
-                self.resultado['next_url'] = next_url
-            raise self.PedidoJaRealizado(
-                u'Já foi realizado um pedido com o número {} e ele está como {}.\n{}'.format(
-                    self.pedido.numero,
-                    servicos.SituacaoPedido.NOMES_SITUACAO[self.pedido.situacao_id],
-                    servicos.SituacaoPedido.mensagens_complementares(self.pedido.situacao_id)
-                )
-            )
+            self.dispara_pedido_jah_realizado()
         self.dados_enviados = self.malote.to_dict()
         self.resposta = self.conexao.post(self.url, self.dados_enviados)
+
+    def dispara_pedido_jah_realizado(self, em_processamento=False):
+        sucesso = em_processamento
+        mensagem = u'Esse pedido está em processamento, porém um erro fez com que o resultado não fosse recebido.\nPor favor, verifique na área do cliente em Meus pedidos a situação dessa compra.'
+        if not em_processamento:
+            sucesso = self.pedido.situacao_id == servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO
+            mensagem = u'Já foi realizado um pedido com o número {} e ele está como {}.\n{}'.format(
+                self.pedido.numero,
+                servicos.SituacaoPedido.NOMES_SITUACAO[self.pedido.situacao_id],
+                servicos.SituacaoPedido.mensagens_complementares(self.pedido.situacao_id)
+            )
+        self.resultado = {
+            'sucesso': sucesso,
+            'situacao_pedido': self.pedido.situacao_id,
+            'alterado_por_notificacao': False
+        }
+        next_url = self.dados.get('next_url', None)
+        if next_url:
+            self.resultado['next_url'] = next_url
+        raise self.PedidoJaRealizado(mensagem)
 
     def _verifica_erro_em_conteudo(self, titulo):
         mensagens = []
