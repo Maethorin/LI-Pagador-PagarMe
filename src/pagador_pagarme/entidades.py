@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
-from pagador import settings, entidades
+from pagador import configuracoes, entidades
 from pagador_pagarme import cadastro
 
 CODIGO_GATEWAY = 12
@@ -68,7 +68,7 @@ class MaloteCartao(entidades.Malote):
         self.card_hash = dados['cartao']
         parcelas = dados.get('parcelas', 1)
         self.installments = parcelas
-        url_notificacao = settings.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
+        url_notificacao = configuracoes.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
         self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         cliente_cep = pedido.endereco_cliente.get('cep', '').replace('-', '')
         self.customer = Cliente(
@@ -104,7 +104,7 @@ class MaloteBoleto(entidades.Malote):
         dias_vencimento = int(self.configuracao.json.get('dias_vencimento', 2))
         self.boleto_expiration_date = (datetime.now() + timedelta(days=dias_vencimento)).isoformat()
         self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
-        url_notificacao = settings.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
+        url_notificacao = configuracoes.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
         self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         cliente_cep = pedido.endereco_cliente.get('cep', '').replace('-', '')
         self.customer = Cliente(
