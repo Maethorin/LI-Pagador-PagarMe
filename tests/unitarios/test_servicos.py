@@ -204,7 +204,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.resposta = mock.MagicMock(status_code=400, sucesso=False, requisicao_invalida=True, nao_autorizado=False, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'Nome do portador do cartão está faltando', u'type': u'whatever'}, {u'message': u'Data de expiração do cartão está faltando', u'type': u'whatever'}], u'method': u'post'})
         self.entregador.processa_dados_pagamento.when.called_with().should.throw(
             self.entregador.EnvioNaoRealizado,
-            u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
+            u'Houve um erro de comunicação e sua compra não foi concluída. Por favor refaça o pedido.'
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
@@ -214,7 +214,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.resposta = mock.MagicMock(status_code=403, sucesso=False, requisicao_invalida=False, nao_autorizado=True, conteudo={u'url': u'/transactions', u'errors': [{u'message': u'api_key inválida', u'type': u'whatever'}], u'method': u'post'})
         self.entregador.processa_dados_pagamento.when.called_with().should.throw(
             self.entregador.EnvioNaoRealizado,
-            u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.'
+            u'Houve um erro de comunicação e sua compra não foi concluída. Por favor refaça o pedido.'
         )
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())

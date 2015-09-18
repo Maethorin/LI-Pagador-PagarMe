@@ -145,14 +145,14 @@ class EntregaPagamento(servicos.EntregaPagamento):
             processado = self.processa_dados_pagamento_cartao()
         if processado:
             return
+        titulo = u'Houve um erro de comunicação e sua compra não foi concluída. Por favor refaça o pedido.'
         if self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
-            titulo = u'A autenticação da loja com o PAGAR.ME falhou. Por favor, entre em contato com nosso SAC.' if self.resposta.nao_autorizado else u'Ocorreu um erro nos dados enviados ao PAGAR.ME. Por favor, entre em contato com nosso SAC.'
             if not self._verifica_erro_em_conteudo(titulo):
                 self.resultado = {'sucesso': False, 'mensagem': u'nao_aprovado', 'situacao_pedido': self.situacao_pedido, 'fatal': True}
         else:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
-            self._verifica_erro_em_conteudo(u'Não foi obtida uma resposta válida do PAGAR.ME. Nosso equipe técnica está avaliando o problema.')
+            self._verifica_erro_em_conteudo(titulo)
 
     def processa_dados_pagamento_boleto(self):
         if self.resposta.sucesso:
