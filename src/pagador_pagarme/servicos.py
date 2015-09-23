@@ -166,7 +166,6 @@ class EntregaPagamento(servicos.EntregaPagamento):
                 'transacao_id': self.resposta.conteudo['id'],
                 'valor_pago': self.formatador.formata_decimal(self.pedido.valor_total),
                 'conteudo_json': {
-                    'metodo': 'cartao',
                     'bandeira': self.resposta.conteudo['card_brand'],
                     'aplicacao': self.configuracao.aplicacao,
                     'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.'),
@@ -256,7 +255,6 @@ class RegistraNotificacao(servicos.RegistraResultado):
                 'transacao_id': self.dados['id'],
                 'valor_pago': valor_pago,
                 'conteudo_json': {
-                    'metodo': 'cartao',
                     'bandeira': self.resposta.conteudo['card_brand'],
                     'aplicacao': self.configuracao.aplicacao,
                     'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.'),
