@@ -10,11 +10,6 @@ class FormularioPagarMe(unittest.TestCase):
         super(FormularioPagarMe, self).__init__(*args, **kwargs)
         self.formulario = cadastro.FormularioPagarMe()
 
-    def test_deve_ter_dados_boleto(self):
-        self.formulario.dados_boleto.nome.should.be.equal('json')
-        self.formulario.dados_boleto.ordem.should.be.equal(0)
-        self.formulario.dados_boleto.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.oculto)
-
     def test_deve_ter_ativo(self):
         self.formulario.ativo.nome.should.be.equal('ativo')
         self.formulario.ativo.ordem.should.be.equal(1)

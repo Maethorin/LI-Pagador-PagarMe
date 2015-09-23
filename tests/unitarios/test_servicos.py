@@ -260,20 +260,6 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         self.entregador.processa_dados_pagamento()
         self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'metodo': 'cartao', 'aplicacao': 'test', 'bandeira': 'visa', 'mensagem_retorno': 'Pagamento autorizado', 'numero_parcelas': 3, 'valor_parcela': 15.68}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
 
-    def test_processa_pagamento_boleto(self):
-        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
-        self.entregador.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
-        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'waiting_payment', 'id': 'identificacao-id', 'boleto_url': 'url-boleto', 'boleto_barcode': 'codigo-barras-boleto', 'boleto_expiration_date': 'data-expiracao-boleto'})
-        self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.equal({'conteudo_json': {'metodo': 'boleto', 'aplicacao': 'test', 'boleto_url': 'url-boleto', 'codigo_barras': 'codigo-barras-boleto', 'vencimento': 'data-expiracao-boleto'}, 'transacao_id': 'identificacao-id', 'valor_pago': '123.56'})
-
-    def test_processa_pagamento_boleto_sem_sucesso(self):
-        self.entregador.configuracao = mock.MagicMock(aplicacao='test')
-        self.entregador.pedido.conteudo_json['pagarme']['metodo'] = 'boleto'
-        self.entregador.resposta = mock.MagicMock(sucesso=True, requisicao_invalida=False, conteudo={'status': 'refused'})
-        self.entregador.processa_dados_pagamento()
-        self.entregador.dados_pagamento.should.be.empty
-
 
 class PagarMeRegistrandoNotificacao(unittest.TestCase):
     def test_nao_deve_definir_redirect(self):
@@ -319,15 +305,6 @@ class PagarMeRegistrandoNotificacao(unittest.TestCase):
         registrador.resposta = mock.MagicMock(sucesso=True, conteudo=resposta)
         registrador.monta_dados_pagamento()
         registrador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'L', 'bandeira': u'visa', 'mensagem_retorno': 'Pagamento aprovado', 'metodo': 'cartao', 'numero_parcelas': 3, 'valor_parcela': 97.47}, 'transacao_id': 1014652, 'valor_pago': '292.42'})
-        registrador.resultado.should.be.equal({'resultado': 'OK'})
-
-    def test_deve_montar_dados_pagamento_boleto_fazendo_request(self):
-        resposta = json.loads("""{"status": "paid","amount": 29242,"installments": 1,"id": 1014652,"payment_method": "boleto",  "boleto_url": "https://api.pagar.me/1/boletos/live_cid1vq9t00000ds3c1nyqg9j5","boleto_barcode": "23791.22928 50000.023221 77000.046902 1 65150000015432","boleto_expiration_date": "2015-08-09T03:00:00.299Z"}""")
-        registrador = servicos.RegistraNotificacao(1234, {'id': 1014652, 'current_status': 'paid'})
-        registrador.configuracao = mock.MagicMock(aplicacao='L')
-        registrador.resposta = mock.MagicMock(sucesso=True, conteudo=resposta)
-        registrador.monta_dados_pagamento()
-        registrador.dados_pagamento.should.be.equal({'conteudo_json': {'aplicacao': 'L', 'boleto_url': u'https://api.pagar.me/1/boletos/live_cid1vq9t00000ds3c1nyqg9j5', 'codigo_barras': u'23791.22928 50000.023221 77000.046902 1 65150000015432', 'metodo': 'boleto', 'vencimento': u'2015-08-09T03:00:00.299Z'}, 'transacao_id': 1014652, 'valor_pago': '292.42'})
         registrador.resultado.should.be.equal({'resultado': 'OK'})
 
     def test_deve_consultar_dados_de_parcela(self):
