@@ -265,3 +265,66 @@ class RegistraNotificacao(servicos.RegistraResultado):
             self.resultado = {'resultado': 'OK'}
         else:
             self.resultado = {'resultado': 'FALHA', 'status_code': 500}
+
+
+class AtualizaTransacoes(servicos.AtualizaTransacoes):
+    def __init__(self, loja_id, dados):
+        super(AtualizaTransacoes, self).__init__(loja_id, dados)
+        self.url = 'https://api.pagar.me/1/search/'
+        self.conexao = self.obter_conexao()
+
+    def define_credenciais(self):
+        self.conexao.credenciador = Credenciador(configuracao=self.configuracao)
+
+    def _gera_dados_envio(self):
+        initial_date = '{}T00:00:00Z'.format(self.dados['data_inicial'])
+        final_date = '{}T23:59:59Z'.format(self.dados['data_final'])
+        return {
+            'type': 'transaction',
+            'query': json.dumps({
+                'from': 0,
+                'size': 1000,
+                'sort': [
+                    {'date_created': {"order": "desc"}}
+                ],
+                'query': {
+                    'filtered': {
+                        'filter': {
+                            'bool': {
+                                'must': [
+                                    {
+                                        'term': {'payment_method': 'credit_card'}
+                                    },
+                                    {
+                                        'range': {
+                                            'date_created': {
+                                                'gte': initial_date,
+                                                'lte': final_date
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+    def consulta_transacoes(self):
+        self.dados_enviados = self._gera_dados_envio()
+        self.resposta = self.conexao.get(self.url, dados=self.dados_enviados)
+
+    def analisa_resultado_transacoes(self):
+        if self.resposta.sucesso:
+            transacoes = self.resposta.conteudo
+            self.dados_pedido = []
+            for transacao in transacoes['hits']['hits']:
+                transacao = transacao['_source']
+                self.dados_pedido.append({
+                    'situacao_pedido': SituacoesDePagamento.do_tipo(transacao['status']),
+                    'pedido_numero': transacao['metadata']['pedido_numero']
+                })
+        else:
+            if 'error' in self.resposta.conteudo:
+                self.erros = self.resposta.conteudo
