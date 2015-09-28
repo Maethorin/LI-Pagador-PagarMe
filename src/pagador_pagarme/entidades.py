@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
+import decimal
 from pagador import configuracoes, entidades
 from pagador_pagarme import cadastro
 
 CODIGO_GATEWAY = 12
 GATEWAY = 'pagarme'
-JSON_PADRAO = {
-    'boleto_ativo': False,
-    'dias_vencimento': 2
-}
 
 
 class PassosDeEnvio(object):
@@ -56,6 +53,7 @@ class MaloteCartao(entidades.Malote):
         self.postback_url = None
         self.customer = None
         self.metadata = None
+        self.soft_descriptor = None
 
     def monta_conteudo(self, pedido, parametros_contrato=None, dados=None):
         self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
@@ -86,6 +84,7 @@ class MaloteCartao(entidades.Malote):
             'pedido_numero': pedido.numero,
             'carrinho': [item.to_dict() for item in pedido.itens]
         }
+        self.soft_descriptor = self.configuracao.informacao_complementar
 
 
 class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
@@ -96,6 +95,7 @@ class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
         self.eh_gateway = True
         super(ConfiguracaoMeioPagamento, self).__init__(loja_id, codigo_pagamento, eh_listagem=eh_listagem)
         self.exige_https = True
+        self.juros_valor = decimal.Decimal(3.5)
         self.url_card_hash = 'https://pagar.me/assets/pagarme-v2.min.js'
         if not self.eh_listagem:
             self.formulario = cadastro.FormularioPagarMe()

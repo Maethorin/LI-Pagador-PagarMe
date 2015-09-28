@@ -37,27 +37,39 @@ class FormularioPagarMe(unittest.TestCase):
         self.formulario.chave_criptografia.tamanho_max.should.be.equal(128)
         self.formulario.chave_criptografia.requerido.should.be.truthy
 
+    def test_deve_ter_complemento_fatura(self):
+        self.formulario.complemento_fatura.nome.should.be.equal('informacao_complementar')
+        self.formulario.complemento_fatura.ordem.should.be.equal(5)
+        self.formulario.complemento_fatura.label.should.be.equal(u'Complemento na Fatura do Comprador')
+        self.formulario.complemento_fatura.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.texto)
+
     def test_deve_ter_valor_minimo_aceitado(self):
         self.formulario.valor_minimo_aceitado.nome.should.be.equal('valor_minimo_aceitado')
-        self.formulario.valor_minimo_aceitado.ordem.should.be.equal(5)
+        self.formulario.valor_minimo_aceitado.ordem.should.be.equal(6)
         self.formulario.valor_minimo_aceitado.label.should.be.equal(u'Valor mínimo')
         self.formulario.valor_minimo_aceitado.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.decimal)
 
     def test_deve_ter_valor_minimo_parcela(self):
         self.formulario.valor_minimo_parcela.nome.should.be.equal('valor_minimo_parcela')
-        self.formulario.valor_minimo_parcela.ordem.should.be.equal(6)
+        self.formulario.valor_minimo_parcela.ordem.should.be.equal(7)
         self.formulario.valor_minimo_parcela.label.should.be.equal(u'Valor mínimo da parcela')
         self.formulario.valor_minimo_parcela.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.decimal)
 
     def test_deve_ter_parcelas_sem_juros(self):
         self.formulario.parcelas_sem_juros.nome.should.be.equal('parcelas_sem_juros')
-        self.formulario.parcelas_sem_juros.ordem.should.be.equal(7)
+        self.formulario.parcelas_sem_juros.ordem.should.be.equal(8)
         self.formulario.parcelas_sem_juros.label.should.be.equal('Parcelas sem juros')
         self.formulario.parcelas_sem_juros.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.escolha)
 
+    def test_deve_ter_maximo_parcelas(self):
+        self.formulario.maximo_parcelas.nome.should.be.equal('maximo_parcelas')
+        self.formulario.maximo_parcelas.ordem.should.be.equal(9)
+        self.formulario.maximo_parcelas.label.should.be.equal(u'Máximo de parcelas')
+        self.formulario.maximo_parcelas.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.escolha)
+
     def test_deve_ter_mostrar_parcelamento(self):
         self.formulario.mostrar_parcelamento.nome.should.be.equal('mostrar_parcelamento')
-        self.formulario.mostrar_parcelamento.ordem.should.be.equal(8)
+        self.formulario.mostrar_parcelamento.ordem.should.be.equal(10)
         self.formulario.mostrar_parcelamento.label.should.be.equal(u'Marque para mostrar o parcelamento na listagem e na página do produto.')
         self.formulario.mostrar_parcelamento.tipo.should.be.equal(cadastro.cadastro.TipoDeCampo.boleano)
 
