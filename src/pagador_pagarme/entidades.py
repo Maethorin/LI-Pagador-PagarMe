@@ -88,6 +88,9 @@ class MaloteCartao(entidades.Malote):
 
 
 class ConfiguracaoMeioPagamento(entidades.ConfiguracaoMeioPagamento):
+    modos_pagamento_aceitos = {
+        'cartoes': ['visa', 'mastercard'],
+    }
 
     def __init__(self, loja_id, codigo_pagamento=None, eh_listagem=False):
         self.campos = ['ativo', 'aplicacao', 'usuario', 'token', 'senha', 'informacao_complementar', 'usar_antifraude', 'juros_valor', 'valor_minimo_aceitado', 'valor_minimo_parcela', 'mostrar_parcelamento', 'parcelas_sem_juros', 'maximo_parcelas']
