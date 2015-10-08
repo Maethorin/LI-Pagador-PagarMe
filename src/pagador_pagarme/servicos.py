@@ -251,6 +251,7 @@ class RegistraNotificacao(servicos.RegistraResultado):
         if self.resposta and self.resposta.sucesso:
             valor_pago = self.formatador.formata_decimal(float(self.resposta.conteudo['amount']) / 100)
             numero_parcela = int(self.resposta.conteudo.get('installments', 1))
+            valor_parcela = self.formatador.formata_decimal(self.formatador.converte_para_decimal(valor_pago) / self.formatador.converte_para_decimal(numero_parcela), como_float=True)
             self.dados_pagamento = {
                 'transacao_id': self.dados['id'],
                 'valor_pago': valor_pago,
@@ -259,7 +260,7 @@ class RegistraNotificacao(servicos.RegistraResultado):
                     'aplicacao': self.configuracao.aplicacao,
                     'mensagem_retorno': MENSAGENS_RETORNO.get(self.resposta.conteudo['status'], u'O pagamento pelo cartão informado não foi processado. Por favor, tente outra forma de pagamento.'),
                     'numero_parcelas': numero_parcela,
-                    'valor_parcela': self.parcela(numero_parcela, valor_pago)['valor_parcelado'],
+                    'valor_parcela': valor_parcela,
                 }
             }
             self.resultado = {'resultado': 'OK'}
