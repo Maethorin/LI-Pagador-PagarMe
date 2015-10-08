@@ -56,14 +56,18 @@ class MaloteCartao(entidades.Malote):
         self.soft_descriptor = None
 
     def monta_conteudo(self, pedido, parametros_contrato=None, dados=None):
-        self.amount = self.formatador.formata_decimal(pedido.valor_total, em_centavos=True)
         if 'cartao' not in dados:
             raise self.DadosInvalidos(u'Os dados do cartão não foram processados corretamente no carrinho')
         if not dados['cartao']:
             raise self.DadosInvalidos(u'Os dados do cartão não foram processados corretamente no carrinho')
+        dados_pagamento = pedido.conteudo_json.get(GATEWAY, {})
+        if not dados_pagamento:
+            raise self.DadosInvalidos(u'O pedido não foi montado corretamente no checkout. Você precisará criar outro pedido.')
         self.card_hash = dados['cartao']
         parcelas = dados.get('parcelas', 1)
         self.installments = parcelas
+        valor_total = self.formatador.converte_para_decimal(dados_pagamento['valor_parcela']) * self.formatador.converte_para_decimal(parcelas)
+        self.amount = self.formatador.formata_decimal(valor_total, em_centavos=True)
         url_notificacao = configuracoes.NOTIFICACAO_URL.format(GATEWAY, self.configuracao.loja_id)
         self.postback_url = '{}/notificacao?referencia={}'.format(url_notificacao, pedido.numero)
         cliente_cep = pedido.endereco_cliente.get('cep', '').replace('-', '')
