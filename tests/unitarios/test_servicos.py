@@ -154,7 +154,7 @@ class PagarMeEntregaPagamento(unittest.TestCase):
         entregador.envia_pagamento.when.called_with().should.throw(
             entregador.PedidoJaRealizado, u'Esse pedido está em processamento, porém um erro fez com que o resultado não fosse recebido.\nPor favor, verifique na área do cliente em Meus pedidos a situação dessa compra.'
         )
-        entregador.resultado.should.be.equal({'alterado_por_notificacao': False, 'situacao_pedido': 4, 'sucesso': True})
+        entregador.resultado.should.be.equal({'alterado_por_notificacao': False, 'pago': True, 'situacao_pedido': 4, 'sucesso': True})
 
     @mock.patch('pagador_pagarme.servicos.EntregaPagamento.obter_conexao', mock.MagicMock())
     @mock.patch('pagador_pagarme.servicos.cache.RedisConnect', RedisMock)

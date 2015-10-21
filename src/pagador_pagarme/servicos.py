@@ -96,7 +96,8 @@ class EntregaPagamento(servicos.EntregaPagamento):
         self.resultado = {
             'sucesso': sucesso,
             'situacao_pedido': self.pedido.situacao_id,
-            'alterado_por_notificacao': False
+            'alterado_por_notificacao': False,
+            'pago': True
         }
         next_url = self.dados.get('next_url', None)
         if next_url:
@@ -146,7 +147,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
         if self.resposta.requisicao_invalida or self.resposta.nao_autorizado:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
             if not self._verifica_erro_em_conteudo(titulo):
-                self.resultado = {'sucesso': False, 'mensagem': u'nao_aprovado', 'situacao_pedido': self.situacao_pedido, 'fatal': True}
+                self.resultado = {'sucesso': False, 'mensagem': u'nao_aprovado', 'situacao_pedido': self.situacao_pedido, 'fatal': True, 'pago': False}
         else:
             self.situacao_pedido = SituacoesDePagamento.do_tipo('refused')
             self._verifica_erro_em_conteudo(titulo)
@@ -157,7 +158,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             pedido = self.cria_entidade_pagador('Pedido', numero=self.pedido.numero, loja_id=self.configuracao.loja_id)
             if pedido.situacao_id not in [servicos.SituacaoPedido.SITUACAO_PEDIDO_EFETUADO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE]:
                 self.situacao_pedido = None
-                self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True}
+                self.resultado = {'sucesso': True, 'situacao_pedido': pedido.situacao_id, 'alterado_por_notificacao': True, 'pago': pedido.situacao_id in [servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE, servicos.SituacaoPedido.SITUACAO_AGUARDANDO_PAGTO]}
                 return True
             sleep(1)
             tempo_espera -= 1
@@ -175,7 +176,7 @@ class EntregaPagamento(servicos.EntregaPagamento):
             }
             self.identificacao_pagamento = self.resposta.conteudo['id']
             self.situacao_pedido = SituacoesDePagamento.do_tipo(self.resposta.conteudo['status'])
-            self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False}
+            self.resultado = {'sucesso': self.resposta.conteudo['status'] == 'processing', 'situacao_pedido': self.situacao_pedido, 'alterado_por_notificacao': False, 'pago': self.situacao_pedido in [servicos.SituacaoPedido.SITUACAO_PEDIDO_PAGO, servicos.SituacaoPedido.SITUACAO_PAGTO_EM_ANALISE, servicos.SituacaoPedido.SITUACAO_AGUARDANDO_PAGTO]}
             return True
         return False
 
